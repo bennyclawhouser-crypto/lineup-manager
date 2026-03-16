@@ -4,8 +4,9 @@ import type { Match, MatchSettings, Player } from '../types';
 interface Props {
   matches: Match[];
   players: Player[];
-  onCreateMatch: (m: Match) => void;
+  onCreateMatch: (m: Match) => Promise<void>;
   onSelectMatch: (m: Match) => void;
+  loading?: boolean;
 }
 
 const DEFAULT_SETTINGS: MatchSettings = {
@@ -27,7 +28,7 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
   const selectAll = () => setSelectedPlayers(players.map(p => p.id));
   const clearAll = () => setSelectedPlayers([]);
 
-  const create = () => {
+  const create = async () => {
     const match: Match = {
       id: crypto.randomUUID(),
       team_id: 'default',
@@ -37,7 +38,7 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
       player_ids: selectedPlayers,
       created_at: new Date().toISOString(),
     };
-    onCreateMatch(match);
+    await onCreateMatch(match);
     setCreating(false);
     setOpponent('');
     setSelectedPlayers([]);

@@ -15,10 +15,11 @@ const posColor = (v: Position) => POSITIONS.find(p => p.value === v)?.color ?? '
 
 interface Props {
   players: Player[];
-  onUpdate: (players: Player[]) => void;
+  onUpsert: (player: Player) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }
 
-export default function PlayersPage({ players, onUpdate }: Props) {
+export default function PlayersPage({ players, onUpsert, onDelete }: Props) {
   const [editing, setEditing] = useState<Player | null>(null);
   const [form, setForm] = useState<Partial<Player>>({});
 
@@ -32,18 +33,17 @@ export default function PlayersPage({ players, onUpdate }: Props) {
     setForm(blank);
   };
 
-  const save = () => {
+  const save = async () => {
     if (!form.full_name || !form.position_1) return;
     const parts = (form.full_name || '').trim().split(' ');
     const first_name = parts[0];
     const last_name_initial = parts.length > 1 ? parts[parts.length - 1][0].toUpperCase() + '.' : '';
     const updated = { ...form, first_name, last_name_initial } as Player;
-    const exists = players.find(p => p.id === updated.id);
-    onUpdate(exists ? players.map(p => p.id === updated.id ? updated : p) : [...players, updated]);
+    await onUpsert(updated);
     setEditing(null);
   };
 
-  const remove = (id: string) => { onUpdate(players.filter(p => p.id !== id)); setEditing(null); };
+  const remove = async (id: string) => { await onDelete(id); setEditing(null); };
 
   const displayName = (p: Player) => `${p.first_name} ${p.last_name_initial}`;
 

@@ -3,6 +3,7 @@ import type { Match, Player, PeriodLineup } from '../types';
 import { generateRotation } from '../lib/rotation';
 import PitchView from '../components/PitchView';
 import { DEFAULT_FORMATION, FORMATIONS } from '../lib/formations';
+import { useMatchPlan } from '../hooks/useMatchPlan';
 
 interface Props {
   match: Match;
@@ -12,17 +13,31 @@ interface Props {
 
 export default function MatchPlanPage({ match, players }: Props) {
   const matchPlayers = players.filter(p => match.player_ids.includes(p.id));
+  const { lineups: savedLineups, saveLineups, syncing } = useMatchPlan(match.id);
   const [lineups, setLineups] = useState<PeriodLineup[]>([]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [formation, setFormation] = useState(DEFAULT_FORMATION);
+  const [initialized, setInitialized] = useState(false);
   const playersOnField = 9;
 
+  // When saved lineups load from Supabase, use them
+  useEffect(() => {
+    if (savedLineups.length > 0 && !initialized) {
+      setLineups(savedLineups);
+      setInitialized(true);
+    }
+  }, [savedLineups]);
+
+  // If no saved plan, generate one
   useEffect(() => {
     if (matchPlayers.length === 0) return;
+    if (initialized) return;
     const generated = generateRotation({ players: matchPlayers, settings: match.settings, playersOnField, formation });
     setLineups(generated);
+    saveLineups(generated);
+    setInitialized(true);
     setActiveIdx(0);
-  }, [match.id, formation]);
+  }, [match.id, formation, initialized]);
 
   const handleDrop = (playerId: string, slotIndex: number) => {
     setLineups(prev => prev.map((lineup, i) => {
@@ -55,6 +70,7 @@ export default function MatchPlanPage({ match, players }: Props) {
       }
       return { ...lineup, on_field: newField, on_bench: newBench };
     }));
+    saveLineups(lineups); // persist after state update
   };
 
   if (lineups.length === 0) return (
@@ -151,7 +167,10 @@ export default function MatchPlanPage({ match, players }: Props) {
 
       {/* Play time */}
       <div style={{ marginTop: 20, background: '#fff', borderRadius: 8, border: '1px solid #e0e0e0', padding: '16px' }}>
-        <div style={{ fontWeight: 500, color: '#202124', marginBottom: 12, fontSize: 15 }}>⏱ Speltid</div>
+        <div style={{ fontWeight: 500, color: '#202124', marginBottom: 12, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
+          ⏱ Speltid
+          {syncing && <span style={{ fontSize: 12, color: '#1a73e8' }}>↑ sparar...</span>}
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {sortedByTime.map(p => {
             const time = timeStats[p.id] || 0;

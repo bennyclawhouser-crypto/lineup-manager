@@ -3,6 +3,7 @@ import PlayersPage from './pages/PlayersPage';
 import MatchesPage from './pages/MatchesPage';
 import MatchPlanPage from './pages/MatchPlanPage';
 import AuthPage from './pages/AuthPage';
+import FeedbackButton from './components/FeedbackButton';
 import { useAuth } from './hooks/useAuth';
 import { useTeamData } from './hooks/useTeamData';
 import type { Match } from './types';
@@ -40,6 +41,7 @@ export default function App() {
   return (
     <Shell>
       <TopBar title="Lineup Manager" userEmail={user.email} onSignOut={signOut} />
+      <FeedbackButton />
       <div style={{ paddingBottom: 72 }}>
         {tab === 'matches' && (
           <MatchesPage

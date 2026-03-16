@@ -136,7 +136,6 @@ export default function MatchPlanPage({ match, players }: Props) {
         substitutions={!isLast ? next?.substitutions : []}
         players={matchPlayers}
         formation={formation}
-        showSubArrows={!isLast}
         nextAssignments={next?.on_field}
         onDrop={handleDrop}
       />

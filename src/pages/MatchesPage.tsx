@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Match, MatchSettings, Player } from '../types';
+import SportadminImport from '../components/SportadminImport';
 
 interface Props {
   matches: Match[];
@@ -16,17 +17,23 @@ const DEFAULT_SETTINGS: MatchSettings = {
 };
 
 export default function MatchesPage({ matches, players, onCreateMatch, onSelectMatch }: Props) {
-  const [creating, setCreating] = useState(false);
+  const [step, setStep] = useState<'list' | 'import' | 'settings'>('list');
   const [opponent, setOpponent] = useState('');
   const [settings, setSettings] = useState<MatchSettings>({ ...DEFAULT_SETTINGS });
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
   const [playersOnField, setPlayersOnField] = useState(9);
+
 
   const togglePlayer = (id: string) =>
     setSelectedPlayers(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
 
   const selectAll = () => setSelectedPlayers(players.map(p => p.id));
   const clearAll = () => setSelectedPlayers([]);
+
+  const handleImportConfirm = (ids: string[], _newNames: string[]) => {
+    setSelectedPlayers(ids);
+    setStep('settings');
+  };
 
   const create = async () => {
     const match: Match = {
@@ -39,7 +46,8 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
       created_at: new Date().toISOString(),
     };
     await onCreateMatch(match);
-    setCreating(false);
+    setStep('list');
+
     setOpponent('');
     setSelectedPlayers([]);
     setSettings({ ...DEFAULT_SETTINGS });
@@ -55,17 +63,17 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
     <div style={{ padding: '16px', maxWidth: 600, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 500, color: '#202124' }}>Matcher</h2>
-        <button onClick={() => setCreating(true)} style={fabBtn}>
+        <button onClick={() => setStep('import')} style={fabBtn}>
           <span style={{ fontSize: 20, marginRight: 6 }}>+</span> Ny match
         </button>
       </div>
 
-      {matches.length === 0 && !creating && (
+      {matches.length === 0 && step === 'list' && (
         <div style={emptyState}>
           <div style={{ fontSize: 56 }}>⚽</div>
           <div style={{ fontSize: 18, fontWeight: 500, color: '#202124', marginTop: 16 }}>Inga matcher ännu</div>
           <div style={{ fontSize: 14, color: '#5f6368', marginTop: 8 }}>Skapa din första match för att komma igång.</div>
-          <button onClick={() => setCreating(true)} style={{ ...fabBtn, marginTop: 24 }}>+ Ny match</button>
+          <button onClick={() => setStep('import')} style={{ ...fabBtn, marginTop: 24 }}>+ Ny match</button>
         </div>
       )}
 
@@ -88,10 +96,24 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
         ))}
       </div>
 
-      {creating && (
-        <div style={modalBackdrop} onClick={() => setCreating(false)}>
+      {/* Step: Sportadmin import */}
+      {step === 'import' && (
+        <div style={modalBackdrop} onClick={() => setStep('list')}>
           <div style={modalBox} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 20px', fontWeight: 500, fontSize: 18, color: '#202124' }}>Ny match</h3>
+            <SportadminImport
+              existingPlayers={players}
+              onConfirm={handleImportConfirm}
+              onSkip={() => setStep('settings')}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Step: Match settings */}
+      {step === 'settings' && (
+        <div style={modalBackdrop} onClick={() => setStep('list')}>
+          <div style={modalBox} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 20px', fontWeight: 500, fontSize: 18, color: '#202124' }}>Matchinställningar</h3>
 
             <Field label="Motståndare (valfritt)">
               <input style={input} value={opponent} placeholder="IFK Göteborg"
@@ -146,7 +168,7 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 24 }}>
-              <button style={textBtn('#5f6368')} onClick={() => setCreating(false)}>Avbryt</button>
+              <button style={textBtn('#5f6368')} onClick={() => setStep('import')}>← Tillbaka</button>
               <button style={{ ...containedBtn, opacity: selectedPlayers.length < playersOnField ? 0.5 : 1 }}
                 onClick={create} disabled={selectedPlayers.length < playersOnField}>
                 Skapa match

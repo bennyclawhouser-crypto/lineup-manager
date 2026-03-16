@@ -27,58 +27,89 @@ export default function App() {
 
   const handleCreateMatch = (m: Match) => setMatches(prev => [...prev, m]);
 
+  const tabs: { id: Tab; label: string; icon: string }[] = [
+    { id: 'matches', label: 'Matcher', icon: '⚽' },
+    { id: 'players', label: 'Truppen', icon: '👥' },
+  ];
+
   if (activeMatch) {
     return (
-      <MatchPlanPage
-        match={activeMatch}
-        players={players}
-        onBack={() => setActiveMatch(null)}
-      />
+      <div style={{ minHeight: '100vh', background: '#f8f9fa', fontFamily: "'Google Sans', Roboto, system-ui, sans-serif" }}>
+        <TopBar title={activeMatch.opponent || 'Match'} onBack={() => setActiveMatch(null)} />
+        <MatchPlanPage match={activeMatch} players={players} onBack={() => setActiveMatch(null)} />
+      </div>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: 'system-ui, sans-serif' }}>
-      {/* Header */}
-      <div style={{ background: '#1e3a5f', color: '#fff', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ fontSize: 22 }}>⚽</span>
-        <span style={{ fontWeight: 800, fontSize: 18 }}>Lineup Manager</span>
-      </div>
+    <div style={{ minHeight: '100vh', background: '#f8f9fa', fontFamily: "'Google Sans', Roboto, system-ui, sans-serif" }}>
+      <TopBar title="Lineup Manager" />
 
-      {/* Content */}
-      <div style={{ paddingBottom: 70 }}>
+      <div style={{ paddingBottom: 72 }}>
         {tab === 'matches' && (
-          <MatchesPage
-            matches={matches}
-            players={players}
-            onCreateMatch={handleCreateMatch}
-            onSelectMatch={setActiveMatch}
-          />
+          <MatchesPage matches={matches} players={players}
+            onCreateMatch={handleCreateMatch} onSelectMatch={setActiveMatch} />
         )}
         {tab === 'players' && (
           <PlayersPage players={players} onUpdate={setPlayers} />
         )}
       </div>
 
-      {/* Bottom nav */}
+      {/* Bottom nav — Material style */}
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
-        background: '#fff', borderTop: '1px solid #e5e7eb',
-        display: 'flex',
+        background: '#fff', borderTop: '1px solid #e0e0e0',
+        display: 'flex', height: 64,
       }}>
-        {(['matches', 'players'] as Tab[]).map(t => (
-          <button key={t} onClick={() => setTab(t)}
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
             style={{
-              flex: 1, padding: '12px 0', border: 'none', background: 'none',
-              cursor: 'pointer', fontWeight: tab === t ? 700 : 400,
-              color: tab === t ? '#2563eb' : '#6b7280',
-              fontSize: 14,
-              borderTop: tab === t ? '2px solid #2563eb' : '2px solid transparent',
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+              justifyContent: 'center', gap: 2, border: 'none', background: 'none',
+              cursor: 'pointer', padding: 0,
+              color: tab === t.id ? '#1a73e8' : '#5f6368',
             }}>
-            {t === 'matches' ? '⚽ Matcher' : '👥 Truppen'}
+            <div style={{
+              width: 64, height: 32, borderRadius: 16,
+              background: tab === t.id ? '#e8f0fe' : 'transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background 0.2s',
+              fontSize: 18,
+            }}>
+              {t.icon}
+            </div>
+            <span style={{ fontSize: 12, fontWeight: tab === t.id ? 600 : 400 }}>{t.label}</span>
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+function TopBar({ title, onBack }: { title: string; onBack?: () => void }) {
+  return (
+    <div style={{
+      background: '#fff', borderBottom: '1px solid #e0e0e0',
+      padding: '0 16px', height: 56,
+      display: 'flex', alignItems: 'center', gap: 12,
+      position: 'sticky', top: 0, zIndex: 50,
+    }}>
+      {onBack && (
+        <button onClick={onBack} style={{
+          background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+          color: '#5f6368', borderRadius: '50%', display: 'flex',
+        }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/>
+          </svg>
+        </button>
+      )}
+      {!onBack && (
+        <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#1a73e8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
+          ⚽
+        </div>
+      )}
+      <span style={{ fontWeight: 500, fontSize: 18, color: '#202124' }}>{title}</span>
     </div>
   );
 }

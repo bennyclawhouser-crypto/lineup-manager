@@ -1,18 +1,12 @@
 export type Foot = 'left' | 'right' | 'both';
 
 export type Position =
-  | 'GK'
-  | 'CB'
-  | 'LB'
-  | 'RB'
-  | 'DM'
-  | 'CM'
-  | 'LM'
-  | 'RM'
-  | 'AM'
-  | 'LW'
-  | 'RW'
-  | 'ST';
+  | 'GK'   // Målvakt
+  | 'CB'   // Innerback
+  | 'WB'   // Ytterback
+  | 'CM'   // Innermittfältare
+  | 'WM'   // Yttermittfältare
+  | 'ST';  // Anfallare
 
 export interface Player {
   id: string;

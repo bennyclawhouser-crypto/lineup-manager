@@ -30,8 +30,12 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
   const selectAll = () => setSelectedPlayers(players.map(p => p.id));
   const clearAll = () => setSelectedPlayers([]);
 
-  const handleImportConfirm = (ids: string[], _newNames: string[]) => {
-    setSelectedPlayers(ids);
+  const handleImportConfirm = (names: string[]) => {
+    // Match confirmed names to existing players by full name
+    const matched = players
+      .filter(p => names.some(n => n.toLowerCase().includes(p.first_name.toLowerCase())))
+      .map(p => p.id);
+    setSelectedPlayers(matched);
     setStep('settings');
   };
 

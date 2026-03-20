@@ -23,11 +23,15 @@ export default function PlayersPage({ players, onUpsert, onDelete }: Props) {
   const [editing, setEditing] = useState<Player | null>(null);
   const [form, setForm] = useState<Partial<Player>>({});
 
-  const startEdit = (p: Player) => { setEditing(p); setForm({ ...p }); };
+  const startEdit = (p: Player) => {
+    const derivedFull = `${p.first_name} ${p.last_name_initial.replace('.', '')}`.trim();
+    setEditing(p);
+    setForm({ ...p, full_name: derivedFull });
+  };
   const startNew = () => {
     const blank: Partial<Player> = {
       id: crypto.randomUUID(), team_id: 'default',
-      always_goalkeeper: false, position_1: 'CM',
+      always_goalkeeper: false, position_1: 'CM', full_name: '',
     };
     setEditing(blank as Player);
     setForm(blank);

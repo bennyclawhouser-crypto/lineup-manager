@@ -56,12 +56,14 @@ export function useTeamData() {
   const upsertPlayer = async (player: Player) => {
     const tid = teamId ?? await ensureTeam();
     if (!tid) return;
-    const row = { ...player, team_id: tid };
+    const { full_name, ...dbPlayer } = player;
+    const row = { ...dbPlayer, team_id: tid };
     const { error } = await supabase.from('players').upsert(row);
     if (error) { setError(error.message); return; }
+    const stored = row as Player;
     setPlayers(prev => {
-      const exists = prev.find(p => p.id === player.id);
-      return exists ? prev.map(p => p.id === player.id ? player : p) : [...prev, player];
+      const exists = prev.find(p => p.id === stored.id);
+      return exists ? prev.map(p => p.id === stored.id ? stored : p) : [...prev, stored];
     });
   };
 

@@ -12,7 +12,7 @@ export interface Player {
   id: string;
   first_name: string;
   last_name_initial: string;
-  full_name: string; // not displayed
+  full_name?: string; // UI helper only, not stored
   dominant_foot?: Foot;
   position_1: Position;
   position_2?: Position;

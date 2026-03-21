@@ -22,6 +22,7 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
   const [settings, setSettings] = useState<MatchSettings>({ ...DEFAULT_SETTINGS });
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
   const [playersOnField, setPlayersOnField] = useState(9);
+  const [pendingNewNames, setPendingNewNames] = useState<string[]>([]);
 
 
   const togglePlayer = (id: string) =>
@@ -30,12 +31,9 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
   const selectAll = () => setSelectedPlayers(players.map(p => p.id));
   const clearAll = () => setSelectedPlayers([]);
 
-  const handleImportConfirm = (names: string[]) => {
-    // Match confirmed names to existing players by full name
-    const matched = players
-      .filter(p => names.some(n => n.toLowerCase().includes(p.first_name.toLowerCase())))
-      .map(p => p.id);
-    setSelectedPlayers(matched);
+  const handleImportConfirm = ({ matchedIds, unmatchedNames }: { matchedIds: string[]; unmatchedNames: string[] }) => {
+    setSelectedPlayers(matchedIds);
+    setPendingNewNames(unmatchedNames);
     setStep('settings');
   };
 
@@ -54,6 +52,7 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
 
     setOpponent('');
     setSelectedPlayers([]);
+    setPendingNewNames([]);
     setSettings({ ...DEFAULT_SETTINGS });
     onSelectMatch(match);
   };
@@ -67,7 +66,7 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
     <div style={{ padding: '16px', maxWidth: 600, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 500, color: '#202124' }}>Matcher</h2>
-        <button onClick={() => setStep('import')} style={fabBtn}>
+        <button onClick={() => { setPendingNewNames([]); setSelectedPlayers([]); setStep('import'); }} style={fabBtn}>
           <span style={{ fontSize: 20, marginRight: 6 }}>+</span> Ny match
         </button>
       </div>
@@ -77,7 +76,7 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
           <div style={{ fontSize: 56 }}>⚽</div>
           <div style={{ fontSize: 18, fontWeight: 500, color: '#202124', marginTop: 16 }}>Inga matcher ännu</div>
           <div style={{ fontSize: 14, color: '#5f6368', marginTop: 8 }}>Skapa din första match för att komma igång.</div>
-          <button onClick={() => setStep('import')} style={{ ...fabBtn, marginTop: 24 }}>+ Ny match</button>
+          <button onClick={() => { setPendingNewNames([]); setSelectedPlayers([]); setStep('import'); }} style={{ ...fabBtn, marginTop: 24 }}>+ Ny match</button>
         </div>
       )}
 
@@ -142,6 +141,28 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
                   onChange={e => setSettings({ ...settings, sub_interval_minutes: Number(e.target.value) })} />
               </Field>
             </div>
+
+            {pendingNewNames.length > 0 && (
+              <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
+                <div style={{ fontWeight: 600, color: '#c2410c', marginBottom: 6 }}>
+                  {pendingNewNames.length} spelare hittades men saknas i truppen
+                </div>
+                <ul style={{ margin: 0, paddingLeft: 18, color: '#7c2d12', fontSize: 13 }}>
+                  {pendingNewNames.map(name => (
+                    <li key={name}>{name}</li>
+                  ))}
+                </ul>
+                <div style={{ fontSize: 12, color: '#7c2d12', marginTop: 6 }}>
+                  Lägg till dem under fliken “Truppen” för att kunna välja dem här.
+                </div>
+                <button
+                  style={{ marginTop: 8, border: '1px solid #f97316', background: '#fff', color: '#c2410c', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}
+                  onClick={() => navigator.clipboard?.writeText(pendingNewNames.join('\n')).catch(() => {})}
+                >
+                  Kopiera lista
+                </button>
+              </div>
+            )}
 
             <div style={{ marginBottom: 4 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>

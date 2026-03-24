@@ -1,32 +1,26 @@
 import { useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 export default function FeedbackButton() {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
 
   const send = async () => {
     if (!text.trim()) return;
     setSending(true);
+    setError('');
     try {
-      // Send via Telegram Bot API — bot token + chat id injected at build time
-      const token = import.meta.env.VITE_TG_BOT_TOKEN;
-      const chatId = import.meta.env.VITE_TG_CHAT_ID;
-      if (token && chatId) {
-        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text: `📋 *Feedback från Lineup Manager*\n\n${text}`,
-            parse_mode: 'Markdown',
-          }),
-        });
-      }
+      const { error: err } = await supabase.from('feedback').insert({
+        text: text.trim(),
+        user_email: (await supabase.auth.getUser()).data.user?.email ?? null,
+      });
+      if (err) { setError('Kunde inte skicka. Försök igen.'); return; }
       setSent(true);
       setText('');
-      setTimeout(() => { setSent(false); setOpen(false); }, 2000);
+      setTimeout(() => { setSent(false); setOpen(false); }, 2500);
     } finally {
       setSending(false);
     }
@@ -34,7 +28,6 @@ export default function FeedbackButton() {
 
   return (
     <>
-      {/* Floating button */}
       <button
         onClick={() => setOpen(true)}
         title="Skicka feedback"
@@ -43,8 +36,8 @@ export default function FeedbackButton() {
           width: 44, height: 44, borderRadius: '50%',
           background: '#fff', border: '1px solid #dadce0',
           boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-          cursor: 'pointer', fontSize: 20, display: 'flex',
-          alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', fontSize: 20,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
         💬
       </button>
@@ -81,6 +74,7 @@ export default function FeedbackButton() {
                   onChange={e => setText(e.target.value)}
                   autoFocus
                 />
+                {error && <p style={{ color: '#E53935', fontSize: 13, margin: '6px 0 0' }}>{error}</p>}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
                   <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', color: '#5f6368', cursor: 'pointer', fontWeight: 500, fontSize: 14, padding: '8px 12px' }}>
                     Avbryt

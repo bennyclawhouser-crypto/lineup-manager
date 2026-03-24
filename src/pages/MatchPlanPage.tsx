@@ -131,11 +131,17 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
   const [rosterSelection, setRosterSelection] = useState<string[]>(currentMatch.player_ids);
   const playersOnField = 9;
 
-  // Load saved plan from Supabase
+  // Load saved plan from Supabase — validate before using
   useEffect(() => {
     if (savedLineups.length > 0 && !initialized) {
-      setLineups(savedLineups);
-      setInitialized(true);
+      // Check if saved plan is valid: every slot should have the correct number of on-field players
+      const expectedOnField = playersOnField;
+      const isValid = savedLineups.every(l => l.on_field.length >= expectedOnField - 1);
+      if (isValid) {
+        setLineups(savedLineups);
+        setInitialized(true);
+      }
+      // If invalid, fall through to regenerate
     }
   }, [savedLineups, initialized]);
 
@@ -254,6 +260,14 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
 
       {/* Top action bar */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12 }}>
+        <button onClick={() => {
+          const generated = generateRotation({ players: matchPlayers, settings: currentMatch.settings, playersOnField, formation });
+          setLineups(generated);
+          saveLineups(generated);
+          setActiveIdx(0);
+        }} style={{ background: 'none', border: '1px solid #dadce0', borderRadius: 20, padding: '5px 14px', cursor: 'pointer', fontSize: 13, color: '#5f6368', fontWeight: 500 }}>
+          🔄 Återställ rotation
+        </button>
         <ExportButton targetId="match-plan-export" filename={currentMatch.opponent || 'uppställning'} />
         {onUpdateMatchPlayers && (
           <button onClick={() => { setRosterSelection(currentMatch.player_ids); setEditingRoster(true); }} style={{

@@ -9,15 +9,19 @@ interface Props {
   match: Match;
   players: Player[];
   onBack: () => void;
+  onUpdateMatchPlayers?: (matchId: string, playerIds: string[]) => Promise<void>;
 }
 
-export default function MatchPlanPage({ match, players }: Props) {
-  const matchPlayers = players.filter(p => match.player_ids.includes(p.id));
-  const { lineups: savedLineups, saveLineups, syncing } = useMatchPlan(match.id);
+export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: Props) {
+  const [currentMatch, setCurrentMatch] = useState(match);
+  const matchPlayers = players.filter(p => currentMatch.player_ids.includes(p.id));
+  const { lineups: savedLineups, saveLineups, syncing } = useMatchPlan(currentMatch.id);
   const [lineups, setLineups] = useState<PeriodLineup[]>([]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [formation, setFormation] = useState(DEFAULT_FORMATION);
   const [initialized, setInitialized] = useState(false);
+  const [editingRoster, setEditingRoster] = useState(false);
+  const [rosterSelection, setRosterSelection] = useState<string[]>(currentMatch.player_ids);
   const playersOnField = 9;
 
   // Load saved plan from Supabase
@@ -98,6 +102,18 @@ export default function MatchPlanPage({ match, players }: Props) {
     });
   }, [activeIdx, formation, saveLineups]);
 
+  const saveRoster = async () => {
+    if (!onUpdateMatchPlayers) return;
+    await onUpdateMatchPlayers(currentMatch.id, rosterSelection);
+    setCurrentMatch(prev => ({ ...prev, player_ids: rosterSelection }));
+    // Regenerate rotation with new roster
+    const newPlayers = players.filter(p => rosterSelection.includes(p.id));
+    const generated = generateRotation({ players: newPlayers, settings: currentMatch.settings, playersOnField, formation });
+    setLineups(generated);
+    saveLineups(generated);
+    setEditingRoster(false);
+  };
+
   if (lineups.length === 0) return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: 16, color: '#5f6368' }}>
       <div style={{ fontSize: 32 }}>⚽</div>
@@ -123,6 +139,52 @@ export default function MatchPlanPage({ match, players }: Props) {
 
   return (
     <div style={{ padding: '16px', maxWidth: 600, margin: '0 auto', paddingBottom: 32 }}>
+
+      {/* Edit roster button */}
+      {onUpdateMatchPlayers && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+          <button onClick={() => { setRosterSelection(currentMatch.player_ids); setEditingRoster(true); }} style={{
+            background: 'none', border: '1px solid #dadce0', borderRadius: 20,
+            padding: '5px 14px', cursor: 'pointer', fontSize: 13, color: '#5f6368', fontWeight: 500,
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            👥 Ändra spelare ({matchPlayers.length})
+          </button>
+        </div>
+      )}
+
+      {/* Roster editor modal */}
+      {editingRoster && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 16 }}
+          onClick={() => setEditingRoster(false)}>
+          <div style={{ background: '#fff', borderRadius: 8, padding: 24, width: '100%', maxWidth: 420, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 24px 38px rgba(0,0,0,0.14)' }}
+            onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 16px', fontWeight: 500, fontSize: 18, color: '#202124' }}>Spelare till matchen</h3>
+            <div style={{ border: '1px solid #dadce0', borderRadius: 6, maxHeight: 320, overflowY: 'auto', marginBottom: 16 }}>
+              {players.map((p, i) => (
+                <label key={p.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                  borderTop: i > 0 ? '1px solid #f1f3f4' : 'none', cursor: 'pointer',
+                  background: rosterSelection.includes(p.id) ? '#e8f0fe' : 'transparent',
+                }}>
+                  <input type="checkbox" checked={rosterSelection.includes(p.id)}
+                    onChange={() => setRosterSelection(prev => prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id])} />
+                  <span style={{ flex: 1, fontSize: 14, color: '#202124' }}>{p.first_name} {p.last_name_initial}</span>
+                  {p.always_goalkeeper && <span style={{ fontSize: 12, color: '#F9A825', fontWeight: 600 }}>MV</span>}
+                </label>
+              ))}
+            </div>
+            <div style={{ fontSize: 13, color: '#5f6368', marginBottom: 12 }}>{rosterSelection.length} spelare valda</div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button onClick={() => setEditingRoster(false)} style={{ background: 'none', border: 'none', color: '#5f6368', cursor: 'pointer', fontWeight: 500, fontSize: 14, padding: '8px 12px' }}>Avbryt</button>
+              <button onClick={saveRoster} disabled={rosterSelection.length < playersOnField}
+                style={{ background: '#1a73e8', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 20px', cursor: 'pointer', fontWeight: 500, fontSize: 14, opacity: rosterSelection.length < playersOnField ? 0.5 : 1 }}>
+                Spara & generera om
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Syncing indicator */}
       {syncing && (

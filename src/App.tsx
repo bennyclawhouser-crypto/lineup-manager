@@ -12,7 +12,7 @@ type Tab = 'matches' | 'players';
 
 export default function App() {
   const { user, loading: authLoading, signOut } = useAuth();
-  const { players, matches, loading: dataLoading, upsertPlayer, deletePlayer, createMatch } = useTeamData();
+  const { players, matches, loading: dataLoading, upsertPlayer, deletePlayer, createMatch, updateMatchPlayers } = useTeamData();
   const [tab, setTab] = useState<Tab>('matches');
   const [activeMatch, setActiveMatch] = useState<Match | null>(null);
 
@@ -33,7 +33,7 @@ export default function App() {
     return (
       <Shell>
         <TopBar title={activeMatch.opponent || 'Match'} onBack={() => setActiveMatch(null)} />
-        <MatchPlanPage match={activeMatch} players={players} onBack={() => setActiveMatch(null)} />
+        <MatchPlanPage match={activeMatch} players={players} onBack={() => setActiveMatch(null)} onUpdateMatchPlayers={updateMatchPlayers} />
       </Shell>
     );
   }

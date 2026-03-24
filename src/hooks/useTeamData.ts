@@ -73,6 +73,12 @@ export function useTeamData() {
   };
 
   // --- Matches ---
+  const updateMatchPlayers = async (matchId: string, playerIds: string[]) => {
+    const { error } = await supabase.from('matches').update({ player_ids: playerIds }).eq('id', matchId);
+    if (error) { setError(error.message); return; }
+    setMatches(prev => prev.map(m => m.id === matchId ? { ...m, player_ids: playerIds } : m));
+  };
+
   const createMatch = async (match: Match) => {
     const tid = teamId ?? await ensureTeam();
     if (!tid) return;
@@ -84,7 +90,7 @@ export function useTeamData() {
 
   return {
     players, matches, teamId, loading, error,
-    upsertPlayer, deletePlayer, createMatch,
+    upsertPlayer, deletePlayer, createMatch, updateMatchPlayers,
     reload: () => teamId && loadData(teamId),
   };
 }

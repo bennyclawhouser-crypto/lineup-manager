@@ -16,8 +16,16 @@ interface Props {
   onDrop?: (playerId: string, slotIndex: number) => void;
 }
 
+// Returns true if this player stays on but moves to a different position next slot
+function isChangingPosition(id: string, currentAssignments: PlayerAssignment[], nextAssignments: PlayerAssignment[]): boolean {
+  const curr = currentAssignments.find(a => a.player_id === id);
+  const next = nextAssignments.find(a => a.player_id === id);
+  if (!curr || !next) return false;
+  return curr.position !== next.position;
+}
+
 export default function PitchView({
-  assignments, benchIds, substitutions = [], players, formation = '3-4-1', onDrop,
+  assignments, benchIds, substitutions = [], players, formation = '3-4-1', nextAssignments = [], onDrop,
 }: Props) {
   const slots = FORMATIONS[formation]?.slots ?? FORMATIONS['3-4-1'].slots;
   const getPlayer = (id: string) => players.find(p => p.id === id);
@@ -79,30 +87,48 @@ export default function PitchView({
               }}
             >
               {/* Circle */}
-              <div
-                draggable={!!player}
-                onDragStart={e => player && e.dataTransfer.setData('playerId', player.id)}
-                style={{
-                  width: 40, height: 40, borderRadius: '50%',
-                  background: player ? posColor : 'rgba(255,255,255,0.1)',
-                  border: `2.5px solid ${goingOff ? '#FFEB3B' : 'rgba(255,255,255,0.85)'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: player ? 'grab' : 'default',
-                  boxShadow: player ? '0 2px 6px rgba(0,0,0,0.5)' : 'none',
-                  position: 'relative',
-                  flexShrink: 0,
-                }}
-              >
-                {goingOff && (
-                  <div style={{
-                    position: 'absolute', top: -8, right: -6,
-                    background: '#FFEB3B', color: '#333',
-                    borderRadius: '50%', width: 16, height: 16,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 10, fontWeight: 700,
-                  }}>↓</div>
-                )}
-              </div>
+              {(() => {
+                const changingPos = player ? isChangingPosition(player.id, assignments, nextAssignments) : false;
+                return (
+                  <div
+                    draggable={!!player}
+                    onDragStart={e => player && e.dataTransfer.setData('playerId', player.id)}
+                    style={{
+                      width: 40, height: 40, borderRadius: '50%',
+                      background: player ? posColor : 'rgba(255,255,255,0.1)',
+                      border: `2.5px solid ${goingOff ? '#FFEB3B' : 'rgba(255,255,255,0.85)'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: player ? 'grab' : 'default',
+                      boxShadow: player ? '0 2px 6px rgba(0,0,0,0.5)' : 'none',
+                      position: 'relative',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {/* Yellow badge: being subbed off */}
+                    {goingOff && (
+                      <div style={{
+                        position: 'absolute', top: -8, right: -6,
+                        background: '#FFEB3B', color: '#333',
+                        borderRadius: '50%', width: 16, height: 16,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 10, fontWeight: 700,
+                      }}>↓</div>
+                    )}
+                    {/* White badge: changing position (but staying on) */}
+                    {!goingOff && changingPos && (
+                      <div style={{
+                        position: 'absolute', top: -8, left: -6,
+                        background: '#fff', color: '#333',
+                        border: '1.5px solid #bdbdbd',
+                        borderRadius: '50%', width: 16, height: 16,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 10, fontWeight: 700,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                      }}>→</div>
+                    )}
+                  </div>
+                );
+              })()}
               {/* Name label — always visible below circle */}
               {player && (
                 <div style={{

@@ -42,9 +42,10 @@ function regenerateFromSlot(
   // We'll regenerate ALL slots and splice in the edited ones.
   const futureSlots = editedLineups.slice(editedIdx + 1);
   const newFuture: PeriodLineup[] = [];
+  const shuffled = [...outfield].sort(() => Math.random() - 0.5);
 
   for (const slot of futureSlots) {
-    const sorted = [...outfield].sort((a, b) =>
+    const sorted = [...shuffled].sort((a, b) =>
       (accTime[a.id] / weights[a.id]) - (accTime[b.id] / weights[b.id])
     );
     const onFieldOutfield = sorted.slice(0, spotsNeeded);

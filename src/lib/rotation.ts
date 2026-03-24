@@ -39,30 +39,29 @@ function assignPositions(
   gk?: Player
 ): PlayerAssignment[] {
   const assignments: PlayerAssignment[] = [];
-  const usedSlots = new Set<number>();
-  const usedPlayers = new Set<string>();
+  const usedSlotIdx = new Set<number>();
 
-  // GK first — always to GK slot
+  // If a dedicated GK is present, assign them to GK slot first
   if (gk) {
     const gkSlot = formation.slots.findIndex(s => s.position === 'GK');
     if (gkSlot >= 0) {
       assignments.push({ player_id: gk.id, position: 'GK', slot_index: gkSlot });
-      usedSlots.add(gkSlot);
+      usedSlotIdx.add(gkSlot);
     }
   }
 
-  const outfieldSlots = formation.slots
+  // All remaining slots (if no GK, this includes the GK slot too)
+  const openSlots = formation.slots
     .map((s, i) => ({ ...s, idx: i }))
-    .filter(s => s.position !== 'GK' && !usedSlots.has(s.idx));
+    .filter(s => !usedSlotIdx.has(s.idx));
 
-  // Build score matrix
-  const remaining = outfield.filter(p => !usedPlayers.has(p.id));
+  const remaining = [...outfield];
 
-  // Greedy: repeatedly pick the highest-score (player, slot) pair
+  // Build score pairs — use ALL open slots (including GK slot when no dedicated GK)
   const pairs: { score: number; pidx: number; sidx: number }[] = [];
   for (let pi = 0; pi < remaining.length; pi++) {
-    for (let si = 0; si < outfieldSlots.length; si++) {
-      pairs.push({ score: positionScore(remaining[pi], outfieldSlots[si].position), pidx: pi, sidx: si });
+    for (let si = 0; si < openSlots.length; si++) {
+      pairs.push({ score: positionScore(remaining[pi], openSlots[si].position), pidx: pi, sidx: si });
     }
   }
   pairs.sort((a, b) => b.score - a.score);
@@ -73,7 +72,7 @@ function assignPositions(
   for (const { pidx, sidx } of pairs) {
     if (assignedPlayers.has(pidx) || assignedSlots.has(sidx)) continue;
     const player = remaining[pidx];
-    const slot = outfieldSlots[sidx];
+    const slot = openSlots[sidx];
     assignments.push({
       player_id: player.id,
       position: slot.position as import('../types').Position,
@@ -81,7 +80,7 @@ function assignPositions(
     });
     assignedPlayers.add(pidx);
     assignedSlots.add(sidx);
-    if (assignedPlayers.size === Math.min(remaining.length, outfieldSlots.length)) break;
+    if (assignedPlayers.size === Math.min(remaining.length, openSlots.length)) break;
   }
 
   return assignments;
@@ -122,9 +121,13 @@ export function generateRotation(input: RotationInput): PeriodLineup[] {
 
   const lineups: PeriodLineup[] = [];
 
+  // Shuffle once initially so ties are broken randomly (not by array order)
+  const shuffled = [...outfield].sort(() => Math.random() - 0.5);
+
   for (const { period, slot } of subSlots) {
     // Sort: players with the lowest weighted accumulated time first
-    const sorted = [...outfield].sort((a, b) => {
+    // Ties are broken by the initial random shuffle order
+    const sorted = [...shuffled].sort((a, b) => {
       const aScore = accTime[a.id] / weights[a.id];
       const bScore = accTime[b.id] / weights[b.id];
       return aScore - bScore;

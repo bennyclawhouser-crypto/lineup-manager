@@ -16,12 +16,13 @@ interface Props {
   onDrop?: (playerId: string, slotIndex: number) => void;
 }
 
-// Returns true if this player stays on but moves to a different position next slot
+// Returns true if this player stays on field but moves to a different slot (physical location)
 function isChangingPosition(id: string, currentAssignments: PlayerAssignment[], nextAssignments: PlayerAssignment[]): boolean {
   const curr = currentAssignments.find(a => a.player_id === id);
   const next = nextAssignments.find(a => a.player_id === id);
   if (!curr || !next) return false;
-  return curr.position !== next.position;
+  // Different slot index = different physical position on pitch
+  return curr.slot_index !== next.slot_index;
 }
 
 export default function PitchView({

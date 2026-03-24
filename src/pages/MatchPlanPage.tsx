@@ -4,7 +4,7 @@ import { generateRotation } from '../lib/rotation';
 import PitchView from '../components/PitchView';
 import { DEFAULT_FORMATION, FORMATIONS } from '../lib/formations';
 import { useMatchPlan } from '../hooks/useMatchPlan';
-import ExportButton from '../components/ExportButton';
+import MatchComments from '../components/MatchComments';
 
 /**
  * After a manual edit to slot `editedIdx`, regenerate all subsequent slots
@@ -121,7 +121,14 @@ interface Props {
 
 export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: Props) {
   const [currentMatch, setCurrentMatch] = useState(match);
+  const [userEmail, setUserEmail] = useState('');
   const matchPlayers = players.filter(p => currentMatch.player_ids.includes(p.id));
+
+  useEffect(() => {
+    import('../lib/supabase').then(({ supabase }) => {
+      supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email ?? ''));
+    });
+  }, []);
   const { lineups: savedLineups, saveLineups, syncing } = useMatchPlan(currentMatch.id);
   const [lineups, setLineups] = useState<PeriodLineup[]>([]);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -268,7 +275,6 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
         }} style={{ background: 'none', border: '1px solid #dadce0', borderRadius: 20, padding: '5px 14px', cursor: 'pointer', fontSize: 13, color: '#5f6368', fontWeight: 500 }}>
           🔄 Återställ rotation
         </button>
-        <ExportButton targetId="match-plan-export" filename={currentMatch.opponent || 'uppställning'} />
         {onUpdateMatchPlayers && (
           <button onClick={() => { setRosterSelection(currentMatch.player_ids); setEditingRoster(true); }} style={{
             background: 'none', border: '1px solid #dadce0', borderRadius: 20,
@@ -387,6 +393,9 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
           })}
         </div>
       )}
+
+      {/* Comments */}
+      {userEmail && <MatchComments matchId={currentMatch.id} userEmail={userEmail} />}
 
       {/* Play time stats */}
       <div style={{ marginTop: 20, background: '#fff', borderRadius: 8, border: '1px solid #e0e0e0', padding: 16 }}>

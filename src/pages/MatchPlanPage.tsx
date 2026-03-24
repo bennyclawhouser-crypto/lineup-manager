@@ -5,6 +5,111 @@ import PitchView from '../components/PitchView';
 import { DEFAULT_FORMATION, FORMATIONS } from '../lib/formations';
 import { useMatchPlan } from '../hooks/useMatchPlan';
 
+/**
+ * After a manual edit to slot `editedIdx`, regenerate all subsequent slots
+ * so the rest of the rotation is based on the new arrangement.
+ */
+function regenerateFromSlot(
+  editedLineups: PeriodLineup[],
+  editedIdx: number,
+  allPlayers: Player[],
+  settings: Match['settings'],
+  playersOnField: number,
+  formation: string
+): PeriodLineup[] {
+  if (editedIdx >= editedLineups.length - 1) return editedLineups;
+
+  // Calculate accumulated time for each player up to and including editedIdx
+  const interval = settings.sub_interval_minutes;
+  const accTime: Record<string, number> = {};
+  for (const p of allPlayers) accTime[p.id] = 0;
+  for (let i = 0; i <= editedIdx; i++) {
+    for (const a of editedLineups[i].on_field) {
+      accTime[a.player_id] = (accTime[a.player_id] ?? 0) + interval;
+    }
+  }
+
+  const gk = allPlayers.find(p => p.always_goalkeeper);
+  const outfield = allPlayers.filter(p => !p.always_goalkeeper);
+  const spotsNeeded = playersOnField - (gk ? 1 : 0);
+  const weights: Record<string, number> = {};
+  for (const p of outfield) weights[p.id] = p.extra_time ? 1.5 : p.less_time ? 0.5 : 1;
+
+  const formationDef = FORMATIONS[formation] ?? FORMATIONS[DEFAULT_FORMATION];
+
+  // Import position assignment helper via generateRotation trick:
+  // We'll regenerate ALL slots and splice in the edited ones.
+  const futureSlots = editedLineups.slice(editedIdx + 1);
+  const newFuture: PeriodLineup[] = [];
+
+  for (const slot of futureSlots) {
+    const sorted = [...outfield].sort((a, b) =>
+      (accTime[a.id] / weights[a.id]) - (accTime[b.id] / weights[b.id])
+    );
+    const onFieldOutfield = sorted.slice(0, spotsNeeded);
+    const onBench = sorted.slice(spotsNeeded).map(p => p.id);
+
+    // Assign positions using preference score
+    const assignments = assignByPreference(onFieldOutfield, formationDef, gk);
+
+    for (const p of onFieldOutfield) accTime[p.id] = (accTime[p.id] ?? 0) + interval;
+
+    newFuture.push({ ...slot, on_field: assignments, on_bench: onBench, substitutions: [] });
+  }
+
+  // Compute substitutions
+  const result = [...editedLineups.slice(0, editedIdx + 1), ...newFuture];
+  for (let i = 1; i < result.length; i++) {
+    const prev = result[i - 1];
+    const curr = result[i];
+    const prevIds = new Set(prev.on_field.map(a => a.player_id));
+    const currIds = new Set(curr.on_field.map(a => a.player_id));
+    const goingOff = prev.on_field.filter(a => !currIds.has(a.player_id));
+    const comingOn = curr.on_field.filter(a => !prevIds.has(a.player_id));
+    result[i].substitutions = goingOff.flatMap((out, idx) => {
+      const inn = comingOn[idx];
+      if (!inn) return [];
+      return [{ out_player_id: out.player_id, in_player_id: inn.player_id, from_position: out.position, to_position: inn.position }];
+    });
+  }
+  return result;
+}
+
+function assignByPreference(
+  outfield: Player[],
+  formation: { slots: { position: string; x: number; y: number }[] },
+  gk?: Player
+): import('../types').PlayerAssignment[] {
+  const assignments: import('../types').PlayerAssignment[] = [];
+  if (gk) {
+    const gkSlot = formation.slots.findIndex(s => s.position === 'GK');
+    if (gkSlot >= 0) assignments.push({ player_id: gk.id, position: 'GK', slot_index: gkSlot });
+  }
+  const outfieldSlots = formation.slots
+    .map((s, i) => ({ ...s, idx: i }))
+    .filter(s => s.position !== 'GK');
+
+  const pairs: { score: number; pidx: number; sidx: number }[] = [];
+  for (let pi = 0; pi < outfield.length; pi++) {
+    for (let si = 0; si < outfieldSlots.length; si++) {
+      const p = outfield[pi];
+      const pos = outfieldSlots[si].position;
+      const score = p.position_1 === pos ? 3 : p.position_2 === pos ? 2 : p.position_3 === pos ? 1 : 0;
+      pairs.push({ score, pidx: pi, sidx: si });
+    }
+  }
+  pairs.sort((a, b) => b.score - a.score);
+  const usedP = new Set<number>(), usedS = new Set<number>();
+  for (const { pidx, sidx } of pairs) {
+    if (usedP.has(pidx) || usedS.has(sidx)) continue;
+    const slot = outfieldSlots[sidx];
+    assignments.push({ player_id: outfield[pidx].id, position: slot.position as import('../types').Position, slot_index: slot.idx });
+    usedP.add(pidx); usedS.add(sidx);
+    if (usedP.size === Math.min(outfield.length, outfieldSlots.length)) break;
+  }
+  return assignments;
+}
+
 interface Props {
   match: Match;
   players: Player[];
@@ -67,7 +172,8 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
 
   const handleDrop = useCallback((playerId: string, slotIndex: number) => {
     setLineups(prev => {
-      const updated = prev.map((lineup, i) => {
+      // 1. Apply the manual edit to the current slot
+      const editedLineups = prev.map((lineup, i) => {
         if (i !== activeIdx) return lineup;
         const existingAtSlot = lineup.on_field.find(a => a.slot_index === slotIndex);
         const movingPlayer = lineup.on_field.find(a => a.player_id === playerId);
@@ -75,7 +181,6 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
         let newBench = [...lineup.on_bench];
 
         if (movingPlayer && existingAtSlot) {
-          // Swap on-field players
           newField = newField.map(a => {
             if (a.player_id === playerId) return { ...a, slot_index: slotIndex, position: existingAtSlot.position };
             if (a.slot_index === slotIndex) return { ...a, slot_index: movingPlayer.slot_index, position: movingPlayer.position };
@@ -84,7 +189,6 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
         } else if (movingPlayer) {
           newField = newField.map(a => a.player_id === playerId ? { ...a, slot_index: slotIndex } : a);
         } else {
-          // From bench to field
           newBench = newBench.filter(id => id !== playerId);
           const pos = existingAtSlot?.position
             ?? (FORMATIONS[formation]?.slots[slotIndex]?.position as typeof newField[0]['position'] ?? 'CM');
@@ -96,11 +200,17 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
         }
         return { ...lineup, on_field: newField, on_bench: newBench };
       });
-      // Persist after state update
+
+      // 2. Regenerate all subsequent slots based on the new arrangement
+      const updated = regenerateFromSlot(
+        editedLineups, activeIdx, matchPlayers,
+        currentMatch.settings, playersOnField, formation
+      );
+
       saveLineups(updated);
       return updated;
     });
-  }, [activeIdx, formation, saveLineups]);
+  }, [activeIdx, formation, saveLineups, matchPlayers, currentMatch.settings]);
 
   const saveRoster = async () => {
     if (!onUpdateMatchPlayers) return;

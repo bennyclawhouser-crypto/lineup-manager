@@ -7,6 +7,7 @@ interface Props {
   players: Player[];
   onCreateMatch: (m: Match) => Promise<void>;
   onSelectMatch: (m: Match) => void;
+  onUpsertPlayer?: (p: Player) => Promise<void>;
   loading?: boolean;
 }
 
@@ -16,7 +17,7 @@ const DEFAULT_SETTINGS: MatchSettings = {
   sub_interval_minutes: 12.5,
 };
 
-export default function MatchesPage({ matches, players, onCreateMatch, onSelectMatch }: Props) {
+export default function MatchesPage({ matches, players, onCreateMatch, onSelectMatch, onUpsertPlayer }: Props) {
   const [step, setStep] = useState<'list' | 'import' | 'settings'>('list');
   const [opponent, setOpponent] = useState('');
   const [settings, setSettings] = useState<MatchSettings>({ ...DEFAULT_SETTINGS });
@@ -31,9 +32,32 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
   const selectAll = () => setSelectedPlayers(players.map(p => p.id));
   const clearAll = () => setSelectedPlayers([]);
 
-  const handleImportConfirm = ({ matchedIds, unmatchedNames }: { matchedIds: string[]; unmatchedNames: string[] }) => {
-    setSelectedPlayers(matchedIds);
-    setPendingNewNames(unmatchedNames);
+  const handleImportConfirm = async ({ matchedIds, unmatchedNames }: { matchedIds: string[]; unmatchedNames: string[] }) => {
+    const newIds: string[] = [];
+
+    if (onUpsertPlayer && unmatchedNames.length > 0) {
+      for (const fullName of unmatchedNames) {
+        const parts = fullName.trim().split(/\s+/);
+        const first_name = parts[0] ?? fullName;
+        const last_name_initial = parts.length > 1 ? parts[parts.length - 1][0].toUpperCase() + '.' : '';
+        const newPlayer: Player = {
+          id: crypto.randomUUID(),
+          team_id: 'default',
+          first_name,
+          last_name_initial,
+          full_name: fullName,
+          position_1: 'CM',
+          always_goalkeeper: false,
+          extra_time: false,
+          less_time: false,
+        };
+        await onUpsertPlayer(newPlayer);
+        newIds.push(newPlayer.id);
+      }
+    }
+
+    setSelectedPlayers([...matchedIds, ...newIds]);
+    setPendingNewNames([]); // all handled
     setStep('settings');
   };
 
@@ -143,24 +167,10 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
             </div>
 
             {pendingNewNames.length > 0 && (
-              <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
-                <div style={{ fontWeight: 600, color: '#c2410c', marginBottom: 6 }}>
-                  {pendingNewNames.length} spelare hittades men saknas i truppen
+              <div style={{ background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: 8, padding: '10px 14px', marginBottom: 16 }}>
+                <div style={{ fontWeight: 500, color: '#2E7D32', fontSize: 13 }}>
+                  ✅ {pendingNewNames.length} nya spelare läggs automatiskt till i truppen
                 </div>
-                <ul style={{ margin: 0, paddingLeft: 18, color: '#7c2d12', fontSize: 13 }}>
-                  {pendingNewNames.map(name => (
-                    <li key={name}>{name}</li>
-                  ))}
-                </ul>
-                <div style={{ fontSize: 12, color: '#7c2d12', marginTop: 6 }}>
-                  Lägg till dem under fliken “Truppen” för att kunna välja dem här.
-                </div>
-                <button
-                  style={{ marginTop: 8, border: '1px solid #f97316', background: '#fff', color: '#c2410c', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}
-                  onClick={() => navigator.clipboard?.writeText(pendingNewNames.join('\n')).catch(() => {})}
-                >
-                  Kopiera lista
-                </button>
               </div>
             )}
 

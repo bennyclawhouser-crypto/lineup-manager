@@ -48,6 +48,7 @@ export default function App() {
             matches={matches} players={players}
             onCreateMatch={handleCreateMatch}
             onSelectMatch={setActiveMatch}
+            onUpsertPlayer={upsertPlayer}
             loading={dataLoading}
           />
         )}

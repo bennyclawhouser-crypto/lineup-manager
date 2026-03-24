@@ -4,6 +4,7 @@ import { generateRotation } from '../lib/rotation';
 import PitchView from '../components/PitchView';
 import { DEFAULT_FORMATION, FORMATIONS } from '../lib/formations';
 import { useMatchPlan } from '../hooks/useMatchPlan';
+import ExportButton from '../components/ExportButton';
 
 /**
  * After a manual edit to slot `editedIdx`, regenerate all subsequent slots
@@ -250,9 +251,10 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
   return (
     <div style={{ padding: '16px', maxWidth: 600, margin: '0 auto', paddingBottom: 32 }}>
 
-      {/* Edit roster button */}
-      {onUpdateMatchPlayers && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+      {/* Top action bar */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12 }}>
+        <ExportButton targetId="match-plan-export" filename={currentMatch.opponent || 'uppställning'} />
+        {onUpdateMatchPlayers && (
           <button onClick={() => { setRosterSelection(currentMatch.player_ids); setEditingRoster(true); }} style={{
             background: 'none', border: '1px solid #dadce0', borderRadius: 20,
             padding: '5px 14px', cursor: 'pointer', fontSize: 13, color: '#5f6368', fontWeight: 500,
@@ -260,8 +262,8 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
           }}>
             👥 Ändra spelare ({matchPlayers.length})
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Roster editor modal */}
       {editingRoster && (
@@ -334,6 +336,8 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
         ))}
       </div>
 
+      {/* Exportable area */}
+      <div id="match-plan-export">
       {/* Pitch */}
       <PitchView
         assignments={current.on_field}
@@ -344,6 +348,8 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
         nextAssignments={next?.on_field}
         onDrop={handleDrop}
       />
+
+      </div>{/* end exportable area */}
 
       {/* Next sub info */}
       {!isLast && next?.substitutions?.length > 0 && (

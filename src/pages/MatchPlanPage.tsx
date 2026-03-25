@@ -7,6 +7,18 @@ import { useMatchPlan } from '../hooks/useMatchPlan';
 import MatchComments from '../components/MatchComments';
 import { RefreshCw, Users, Clock, ArrowLeftRight } from 'lucide-react';
 
+function computeSubstitutionsLocal(prev: PeriodLineup, curr: PeriodLineup): PeriodLineup['substitutions'] {
+  const prevIds = new Set(prev.on_field.map(a => a.player_id));
+  const currIds = new Set(curr.on_field.map(a => a.player_id));
+  const goingOff = prev.on_field.filter(a => !currIds.has(a.player_id));
+  const comingOn = curr.on_field.filter(a => !prevIds.has(a.player_id));
+  return goingOff.flatMap((out, i) => {
+    const inn = comingOn[i];
+    if (!inn) return [];
+    return [{ out_player_id: out.player_id, in_player_id: inn.player_id, from_position: out.position, to_position: inn.position }];
+  });
+}
+
 /**
  * After a manual edit to slot `editedIdx`, regenerate all subsequent slots
  * so the rest of the rotation is based on the new arrangement.
@@ -222,11 +234,22 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
         return { ...lineup, on_field: newField, on_bench: newBench };
       });
 
-      // 2. Regenerate all subsequent slots based on the new arrangement
-      const updated = regenerateFromSlot(
-        editedLineups, activeIdx, matchPlayers,
-        currentMatch.settings, playersOnField, formation
-      );
+      // Recompute substitutions for adjacent slots only (no full regen)
+      const updated = [...editedLineups];
+      // Update substitutions for current → next transition
+      if (activeIdx < updated.length - 1) {
+        updated[activeIdx + 1] = {
+          ...updated[activeIdx + 1],
+          substitutions: computeSubstitutionsLocal(updated[activeIdx], updated[activeIdx + 1]),
+        };
+      }
+      // Update substitutions for prev → current transition
+      if (activeIdx > 0) {
+        updated[activeIdx] = {
+          ...updated[activeIdx],
+          substitutions: computeSubstitutionsLocal(updated[activeIdx - 1], updated[activeIdx]),
+        };
+      }
 
       saveLineups(updated);
       return updated;

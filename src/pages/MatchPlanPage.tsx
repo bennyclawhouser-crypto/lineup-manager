@@ -136,6 +136,7 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
   const [initialized, setInitialized] = useState(false);
   const [editingRoster, setEditingRoster] = useState(false);
   const [rosterSelection, setRosterSelection] = useState<string[]>(currentMatch.player_ids);
+  const [maxChangePct, setMaxChangePct] = useState(25); // % of players allowed to change position
   const playersOnField = 9;
 
   // Load saved plan from Supabase — validate before using
@@ -163,7 +164,9 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
         settings: match.settings,
         playersOnField,
         formation,
-      });
+      
+      maxPositionChangeFraction: maxChangePct / 100,
+    });
       setLineups(generated);
       saveLineups(generated);
       setInitialized(true);
@@ -179,6 +182,8 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
       settings: match.settings,
       playersOnField,
       formation: f,
+    
+      maxPositionChangeFraction: maxChangePct / 100,
     });
     setLineups(generated);
     saveLineups(generated);
@@ -233,7 +238,9 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
     setCurrentMatch(prev => ({ ...prev, player_ids: rosterSelection }));
     // Regenerate rotation with new roster
     const newPlayers = players.filter(p => rosterSelection.includes(p.id));
-    const generated = generateRotation({ players: newPlayers, settings: currentMatch.settings, playersOnField, formation });
+    const generated = generateRotation({ players: newPlayers, settings: currentMatch.settings, playersOnField, formation ,
+      maxPositionChangeFraction: maxChangePct / 100,
+    });
     setLineups(generated);
     saveLineups(generated);
     setEditingRoster(false);
@@ -268,7 +275,9 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
       {/* Top action bar */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12 }}>
         <button onClick={() => {
-          const generated = generateRotation({ players: matchPlayers, settings: currentMatch.settings, playersOnField, formation });
+          const generated = generateRotation({ players: matchPlayers, settings: currentMatch.settings, playersOnField, formation ,
+      maxPositionChangeFraction: maxChangePct / 100,
+    });
           setLineups(generated);
           saveLineups(generated);
           setActiveIdx(0);
@@ -325,6 +334,21 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
           <span>🔄</span> Synkar med molnet...
         </div>
       )}
+
+      {/* Position change setting */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, background: '#fff', borderRadius: 8, border: '1px solid #e0e0e0', padding: '10px 14px' }}>
+        <span style={{ fontSize: 13, color: '#5f6368', whiteSpace: 'nowrap' }}>↔ Max positionsbyte:</span>
+        <input type="range" min={0} max={100} step={5} value={maxChangePct}
+          onChange={e => setMaxChangePct(Number(e.target.value))}
+          style={{ flex: 1 }} />
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#202124', minWidth: 36 }}>{maxChangePct}%</span>
+        <button onClick={() => {
+          const generated = generateRotation({ players: matchPlayers, settings: currentMatch.settings, playersOnField, formation, maxPositionChangeFraction: maxChangePct / 100 });
+          setLineups(generated); saveLineups(generated); setActiveIdx(0);
+        }} style={{ background: '#1a73e8', color: '#fff', border: 'none', borderRadius: 4, padding: '5px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap' }}>
+          Generera om
+        </button>
+      </div>
 
       {/* Formation picker */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>

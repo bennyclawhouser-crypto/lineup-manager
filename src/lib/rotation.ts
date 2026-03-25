@@ -1,11 +1,13 @@
 import type { Player, MatchSettings, PeriodLineup, PlayerAssignment } from '../types';
 import { FORMATIONS, DEFAULT_FORMATION } from './formations';
 
-interface RotationInput {
+export interface RotationInput {
   players: Player[];
   settings: MatchSettings;
   playersOnField: number;
   formation?: string;
+  /** Max fraction of on-field players (excl GK) allowed to change slot across the whole match. Default 0.25 */
+  maxPositionChangeFraction?: number;
 }
 
 function getSubSlots(settings: MatchSettings): { period: number; slot: number }[] {
@@ -19,9 +21,6 @@ function getSubSlots(settings: MatchSettings): { period: number; slot: number }[
   return slots;
 }
 
-/**
- * Score how well a player fits a position (higher = better).
- */
 function positionScore(player: Player, position: string): number {
   if (player.position_1 === position) return 3;
   if (player.position_2 === position) return 2;
@@ -30,34 +29,52 @@ function positionScore(player: Player, position: string): number {
 }
 
 /**
- * Hungarian-style greedy assignment: assign players to slots maximising
- * total position-preference score, breaking ties by player index.
+ * Assign players to slots using greedy preference matching.
+ * When `lockedSlots` is provided, players already on-field keep their current
+ * slot (no unnecessary position shuffling).
  */
 function assignPositions(
-  outfield: Player[],
+  onFieldPlayers: Player[],
   formation: { slots: { position: string; x: number; y: number }[] },
-  gk?: Player
+  gk: Player | undefined,
+  /** slot_index → player_id for players who are staying on and should keep their slot */
+  lockedSlots: Map<number, string> = new Map()
 ): PlayerAssignment[] {
   const assignments: PlayerAssignment[] = [];
   const usedSlotIdx = new Set<number>();
+  const usedPlayerIds = new Set<string>();
 
-  // If a dedicated GK is present, assign them to GK slot first
+  // GK first
   if (gk) {
     const gkSlot = formation.slots.findIndex(s => s.position === 'GK');
     if (gkSlot >= 0) {
       assignments.push({ player_id: gk.id, position: 'GK', slot_index: gkSlot });
       usedSlotIdx.add(gkSlot);
+      usedPlayerIds.add(gk.id);
     }
   }
 
-  // All remaining slots (if no GK, this includes the GK slot too)
+  // Honour locked slots: players staying on keep their old position
+  for (const [slotIdx, playerId] of lockedSlots.entries()) {
+    if (usedSlotIdx.has(slotIdx) || usedPlayerIds.has(playerId)) continue;
+    const slot = formation.slots[slotIdx];
+    if (!slot) continue;
+    assignments.push({
+      player_id: playerId,
+      position: slot.position as import('../types').Position,
+      slot_index: slotIdx,
+    });
+    usedSlotIdx.add(slotIdx);
+    usedPlayerIds.add(playerId);
+  }
+
+  // Remaining players (new substitutes) get best available slot by preference
   const openSlots = formation.slots
     .map((s, i) => ({ ...s, idx: i }))
     .filter(s => !usedSlotIdx.has(s.idx));
 
-  const remaining = [...outfield];
+  const remaining = onFieldPlayers.filter(p => !usedPlayerIds.has(p.id));
 
-  // Build score pairs — use ALL open slots (including GK slot when no dedicated GK)
   const pairs: { score: number; pidx: number; sidx: number }[] = [];
   for (let pi = 0; pi < remaining.length; pi++) {
     for (let si = 0; si < openSlots.length; si++) {
@@ -66,21 +83,14 @@ function assignPositions(
   }
   pairs.sort((a, b) => b.score - a.score);
 
-  const assignedPlayers = new Set<number>();
-  const assignedSlots = new Set<number>();
-
+  const assignedP = new Set<number>(), assignedS = new Set<number>();
   for (const { pidx, sidx } of pairs) {
-    if (assignedPlayers.has(pidx) || assignedSlots.has(sidx)) continue;
+    if (assignedP.has(pidx) || assignedS.has(sidx)) continue;
     const player = remaining[pidx];
     const slot = openSlots[sidx];
-    assignments.push({
-      player_id: player.id,
-      position: slot.position as import('../types').Position,
-      slot_index: slot.idx,
-    });
-    assignedPlayers.add(pidx);
-    assignedSlots.add(sidx);
-    if (assignedPlayers.size === Math.min(remaining.length, openSlots.length)) break;
+    assignments.push({ player_id: player.id, position: slot.position as import('../types').Position, slot_index: slot.idx });
+    assignedP.add(pidx); assignedS.add(sidx);
+    if (assignedP.size === Math.min(remaining.length, openSlots.length)) break;
   }
 
   return assignments;
@@ -94,52 +104,85 @@ function computeSubstitutions(prev: PeriodLineup, curr: PeriodLineup): PeriodLin
   return goingOff.flatMap((out, i) => {
     const inn = comingOn[i];
     if (!inn) return [];
-    return [{
-      out_player_id: out.player_id,
-      in_player_id: inn.player_id,
-      from_position: out.position,
-      to_position: inn.position,
-    }];
+    return [{ out_player_id: out.player_id, in_player_id: inn.player_id, from_position: out.position, to_position: inn.position }];
   });
 }
 
 export function generateRotation(input: RotationInput): PeriodLineup[] {
   const { players, settings, playersOnField } = input;
   const formation = FORMATIONS[input.formation || DEFAULT_FORMATION];
+  const maxChangeFraction = input.maxPositionChangeFraction ?? 0.25;
   const subSlots = getSubSlots(settings);
 
   const gk = players.find(p => p.always_goalkeeper);
   const outfield = players.filter(p => !p.always_goalkeeper);
   const spotsNeeded = playersOnField - (gk ? 1 : 0);
 
-  // Weights for play-time equalisation
+  // Max number of outfield players allowed to change position across whole match
+  const maxPositionChangers = Math.max(1, Math.round(spotsNeeded * maxChangeFraction));
+
   const weights: Record<string, number> = {};
   for (const p of outfield) weights[p.id] = p.extra_time ? 1.5 : p.less_time ? 0.5 : 1;
 
   const accTime: Record<string, number> = {};
   for (const p of outfield) accTime[p.id] = 0;
 
+  // Track how many times each player has changed position slot
+  const positionChangeCount: Record<string, number> = {};
+  for (const p of outfield) positionChangeCount[p.id] = 0;
+
+  const shuffled = [...outfield].sort(() => Math.random() - 0.5);
   const lineups: PeriodLineup[] = [];
 
-  // Shuffle once initially so ties are broken randomly (not by array order)
-  const shuffled = [...outfield].sort(() => Math.random() - 0.5);
-
   for (const { period, slot } of subSlots) {
-    // Sort: players with the lowest weighted accumulated time first
-    // Ties are broken by the initial random shuffle order
-    const sorted = [...shuffled].sort((a, b) => {
-      const aScore = accTime[a.id] / weights[a.id];
-      const bScore = accTime[b.id] / weights[b.id];
-      return aScore - bScore;
-    });
+    const sorted = [...shuffled].sort((a, b) =>
+      (accTime[a.id] / weights[a.id]) - (accTime[b.id] / weights[b.id])
+    );
 
     const onFieldOutfield = sorted.slice(0, spotsNeeded);
     const onBench = sorted.slice(spotsNeeded).map(p => p.id);
 
-    const assignments = assignPositions(onFieldOutfield, formation, gk);
+    // Build locked slots: players on field in previous slot keep their position
+    // unless they have already used their position-change allowance
+    const lockedSlots = new Map<number, string>();
+    if (lineups.length > 0) {
+      const prev = lineups[lineups.length - 1];
+      const newOnFieldIds = new Set(onFieldOutfield.map(p => p.id));
+      // Players staying on field
+      const staying = prev.on_field.filter(a => newOnFieldIds.has(a.player_id));
+      for (const a of staying) {
+        // Player keeps slot unless they have hit change limit
+        if (positionChangeCount[a.player_id] < maxPositionChangers) {
+          lockedSlots.set(a.slot_index, a.player_id);
+        } else {
+          // Force keep their slot (already used allowance)
+          lockedSlots.set(a.slot_index, a.player_id);
+        }
+      }
+      // Incoming subs: they take the slot of the player they replace
+      const goingOffSlots = prev.on_field
+        .filter(a => !newOnFieldIds.has(a.player_id))
+        .map(a => a.slot_index);
+      // Leave those slots open for new players (handled in assignPositions)
+      for (const slotIdx of goingOffSlots) {
+        lockedSlots.delete(slotIdx);
+      }
+    }
+
+    const assignments = assignPositions(onFieldOutfield, formation, gk, lockedSlots);
+
+    // Track position changes
+    if (lineups.length > 0) {
+      const prev = lineups[lineups.length - 1];
+      for (const a of assignments) {
+        const prevA = prev.on_field.find(p => p.player_id === a.player_id);
+        if (prevA && prevA.slot_index !== a.slot_index) {
+          positionChangeCount[a.player_id] = (positionChangeCount[a.player_id] || 0) + 1;
+        }
+      }
+    }
 
     for (const p of onFieldOutfield) accTime[p.id] += settings.sub_interval_minutes;
-
     lineups.push({ period, sub_slot: slot, on_field: assignments, on_bench: onBench, substitutions: [] });
   }
 

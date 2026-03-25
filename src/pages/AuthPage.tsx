@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar } from 'lucide-react';
+
 import { useAuth } from '../hooks/useAuth';
 
 export default function AuthPage() {
@@ -38,9 +38,7 @@ export default function AuthPage() {
         textAlign: 'center',
       }}>
         {/* Logo */}
-        <div style={{ width: 56, height: 56, background: '#C8E64C', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-          <Calendar size={26} color="#1A1A1A" />
-        </div>
+        <img src="/lineup-manager/logo.png" alt="Lineup Manager" style={{ height: 48, objectFit: 'contain', margin: '0 auto 20px', display: 'block' }} />
 
         <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1A1A1A', marginBottom: 6 }}>Lineup Manager</h1>
         <p style={{ fontSize: 14, color: '#6B7280', marginBottom: 28 }}>

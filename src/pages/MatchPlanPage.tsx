@@ -5,6 +5,7 @@ import PitchView from '../components/PitchView';
 import { DEFAULT_FORMATION, FORMATIONS } from '../lib/formations';
 import { useMatchPlan } from '../hooks/useMatchPlan';
 import MatchComments from '../components/MatchComments';
+import { RefreshCw, Users, Clock, ArrowLeftRight } from 'lucide-react';
 
 /**
  * After a manual edit to slot `editedIdx`, regenerate all subsequent slots
@@ -270,57 +271,44 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
     l.sub_slot === 0 ? `P${l.period}` : `P${l.period}.${l.sub_slot}`;
 
   return (
-    <div style={{ padding: '16px', maxWidth: 600, margin: '0 auto', paddingBottom: 32 }}>
+    <div style={{ paddingTop: 8, paddingBottom: 32 }}>
 
-      {/* Top action bar */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12 }}>
+      {/* Action bar */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 14 }}>
         <button onClick={() => {
-          const generated = generateRotation({ players: matchPlayers, settings: currentMatch.settings, playersOnField, formation ,
-      maxPositionChangeFraction: maxChangePct / 100,
-    });
-          setLineups(generated);
-          saveLineups(generated);
-          setActiveIdx(0);
-        }} style={{ background: 'none', border: '1px solid #dadce0', borderRadius: 20, padding: '5px 14px', cursor: 'pointer', fontSize: 13, color: '#5f6368', fontWeight: 500 }}>
-          🔄 Återställ rotation
+          const g = generateRotation({ players: matchPlayers, settings: currentMatch.settings, playersOnField, formation, maxPositionChangeFraction: maxChangePct / 100 });
+          setLineups(g); saveLineups(g); setActiveIdx(0);
+        }} style={secondaryBtn}>
+          <RefreshCw size={14} color="#6B7280" />
+          Återställ
         </button>
         {onUpdateMatchPlayers && (
-          <button onClick={() => { setRosterSelection(currentMatch.player_ids); setEditingRoster(true); }} style={{
-            background: 'none', border: '1px solid #dadce0', borderRadius: 20,
-            padding: '5px 14px', cursor: 'pointer', fontSize: 13, color: '#5f6368', fontWeight: 500,
-            display: 'flex', alignItems: 'center', gap: 6,
-          }}>
-            👥 Ändra spelare ({matchPlayers.length})
+          <button onClick={() => { setRosterSelection(currentMatch.player_ids); setEditingRoster(true); }} style={secondaryBtn}>
+            <Users size={14} color="#6B7280" />
+            Spelare ({matchPlayers.length})
           </button>
         )}
       </div>
 
-      {/* Roster editor modal */}
+      {/* Roster modal */}
       {editingRoster && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 16 }}
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200 }}
           onClick={() => setEditingRoster(false)}>
-          <div style={{ background: '#fff', borderRadius: 8, padding: 24, width: '100%', maxWidth: 420, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 24px 38px rgba(0,0,0,0.14)' }}
+          <div style={{ background: '#fff', borderRadius: '24px 24px 0 0', padding: 24, width: '100%', maxWidth: 520, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 -4px 24px rgba(0,0,0,0.12)' }}
             onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 16px', fontWeight: 500, fontSize: 18, color: '#202124' }}>Spelare till matchen</h3>
-            <div style={{ border: '1px solid #dadce0', borderRadius: 6, maxHeight: 320, overflowY: 'auto', marginBottom: 16 }}>
+            <h3 style={{ fontWeight: 700, fontSize: 18, color: '#1A1A1A', marginBottom: 16 }}>Spelare till matchen</h3>
+            <div style={{ border: '1.5px solid #E5E7EB', borderRadius: 12, maxHeight: 320, overflowY: 'auto', marginBottom: 16 }}>
               {players.map((p, i) => (
-                <label key={p.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
-                  borderTop: i > 0 ? '1px solid #f1f3f4' : 'none', cursor: 'pointer',
-                  background: rosterSelection.includes(p.id) ? '#e8f0fe' : 'transparent',
-                }}>
-                  <input type="checkbox" checked={rosterSelection.includes(p.id)}
-                    onChange={() => setRosterSelection(prev => prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id])} />
-                  <span style={{ flex: 1, fontSize: 14, color: '#202124' }}>{p.first_name} {p.last_name_initial}</span>
-                  {p.always_goalkeeper && <span style={{ fontSize: 12, color: '#F9A825', fontWeight: 600 }}>MV</span>}
+                <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderTop: i > 0 ? '1px solid #F3F4F6' : 'none', cursor: 'pointer', background: rosterSelection.includes(p.id) ? '#FAFFF0' : 'transparent' }}>
+                  <input type="checkbox" checked={rosterSelection.includes(p.id)} onChange={() => setRosterSelection(prev => prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id])} style={{ accentColor: '#C8E64C', width: 16, height: 16 }} />
+                  <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: '#1A1A1A' }}>{p.first_name} {p.last_name_initial}</span>
+                  {p.always_goalkeeper && <span style={{ fontSize: 11, color: '#F59E0B', fontWeight: 700, background: '#FEF3C7', padding: '2px 8px', borderRadius: 99 }}>MV</span>}
                 </label>
               ))}
             </div>
-            <div style={{ fontSize: 13, color: '#5f6368', marginBottom: 12 }}>{rosterSelection.length} spelare valda</div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button onClick={() => setEditingRoster(false)} style={{ background: 'none', border: 'none', color: '#5f6368', cursor: 'pointer', fontWeight: 500, fontSize: 14, padding: '8px 12px' }}>Avbryt</button>
-              <button onClick={saveRoster} disabled={rosterSelection.length < playersOnField}
-                style={{ background: '#1a73e8', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 20px', cursor: 'pointer', fontWeight: 500, fontSize: 14, opacity: rosterSelection.length < playersOnField ? 0.5 : 1 }}>
+              <button onClick={() => setEditingRoster(false)} style={secondaryBtn}>Avbryt</button>
+              <button onClick={saveRoster} disabled={rosterSelection.length < playersOnField} style={{ ...primaryBtn, opacity: rosterSelection.length < playersOnField ? 0.4 : 1 }}>
                 Spara & generera om
               </button>
             </div>
@@ -328,25 +316,24 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
         </div>
       )}
 
-      {/* Syncing indicator */}
+      {/* Syncing */}
       {syncing && (
-        <div style={{ fontSize: 12, color: '#1a73e8', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span>🔄</span> Synkar med molnet...
+        <div style={{ fontSize: 12, color: '#6366F1', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <RefreshCw size={12} color="#6366F1" /> Synkar...
         </div>
       )}
 
       {/* Position change setting */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, background: '#fff', borderRadius: 8, border: '1px solid #e0e0e0', padding: '10px 14px' }}>
-        <span style={{ fontSize: 13, color: '#5f6368', whiteSpace: 'nowrap' }}>↔ Max positionsbyte:</span>
-        <input type="range" min={0} max={100} step={5} value={maxChangePct}
-          onChange={e => setMaxChangePct(Number(e.target.value))}
-          style={{ flex: 1 }} />
-        <span style={{ fontSize: 13, fontWeight: 600, color: '#202124', minWidth: 36 }}>{maxChangePct}%</span>
+      <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, padding: '12px 16px' }}>
+        <ArrowLeftRight size={15} color="#6B7280" />
+        <span style={{ fontSize: 13, color: '#6B7280', whiteSpace: 'nowrap' }}>Max positionsbyte:</span>
+        <input type="range" min={0} max={100} step={5} value={maxChangePct} onChange={e => setMaxChangePct(Number(e.target.value))} style={{ flex: 1, accentColor: '#C8E64C' }} />
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A', minWidth: 32 }}>{maxChangePct}%</span>
         <button onClick={() => {
-          const generated = generateRotation({ players: matchPlayers, settings: currentMatch.settings, playersOnField, formation, maxPositionChangeFraction: maxChangePct / 100 });
-          setLineups(generated); saveLineups(generated); setActiveIdx(0);
-        }} style={{ background: '#1a73e8', color: '#fff', border: 'none', borderRadius: 4, padding: '5px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap' }}>
-          Generera om
+          const g = generateRotation({ players: matchPlayers, settings: currentMatch.settings, playersOnField, formation, maxPositionChangeFraction: maxChangePct / 100 });
+          setLineups(g); saveLineups(g); setActiveIdx(0);
+        }} style={primaryBtn}>
+          Ok
         </button>
       </div>
 
@@ -354,11 +341,10 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
       <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
         {Object.keys(FORMATIONS).map(f => (
           <button key={f} onClick={() => handleFormationChange(f)} style={{
-            padding: '4px 12px', borderRadius: 16,
-            border: `1.5px solid ${formation === f ? '#1a73e8' : '#dadce0'}`,
-            background: formation === f ? '#e8f0fe' : '#fff',
-            color: formation === f ? '#1a73e8' : '#5f6368',
-            cursor: 'pointer', fontWeight: 500, fontSize: 13,
+            padding: '5px 14px', borderRadius: 999, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
+            background: formation === f ? '#C8E64C' : '#fff',
+            color: '#1A1A1A',
+            boxShadow: formation === f ? 'none' : '0 1px 4px rgba(0,0,0,0.08)',
           }}>
             {f}
           </button>
@@ -366,23 +352,19 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
       </div>
 
       {/* Slot tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 14, overflowX: 'auto', paddingBottom: 4 }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 14, overflowX: 'auto', paddingBottom: 4 }}>
         {lineups.map((l, i) => (
           <button key={i} onClick={() => setActiveIdx(i)} style={{
-            flexShrink: 0, padding: '5px 12px', borderRadius: 16,
-            border: `1px solid ${i === activeIdx ? '#1a73e8' : '#dadce0'}`,
-            background: i === activeIdx ? '#1a73e8' : '#fff',
-            color: i === activeIdx ? '#fff' : '#202124',
-            fontWeight: i === activeIdx ? 600 : 400, fontSize: 13,
-            cursor: 'pointer',
+            flexShrink: 0, padding: '5px 14px', borderRadius: 999, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
+            background: i === activeIdx ? '#6366F1' : '#fff',
+            color: i === activeIdx ? '#fff' : '#1A1A1A',
+            boxShadow: i === activeIdx ? 'none' : '0 1px 4px rgba(0,0,0,0.08)',
           }}>
             {slotLabel(l)}
           </button>
         ))}
       </div>
 
-      {/* Exportable area */}
-      <div id="match-plan-export">
       {/* Pitch */}
       <PitchView
         assignments={current.on_field}
@@ -394,13 +376,11 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
         onDrop={handleDrop}
       />
 
-      </div>{/* end exportable area */}
-
-      {/* Next sub info */}
+      {/* Next sub */}
       {!isLast && next?.substitutions?.length > 0 && (
-        <div style={{ marginTop: 14, background: '#FFF8E1', border: '1px solid #FFE082', borderRadius: 8, padding: '12px 16px' }}>
-          <div style={{ fontWeight: 500, color: '#F57F17', marginBottom: 8, fontSize: 14 }}>
-            🔄 Nästa byte ({slotLabel(next)})
+        <div style={{ ...card, marginTop: 14, padding: '14px 16px', borderLeft: '3px solid #C8E64C' }}>
+          <div style={{ fontWeight: 700, color: '#1A1A1A', marginBottom: 8, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <RefreshCw size={14} color="#6B7280" /> Nästa byte — {slotLabel(next)}
           </div>
           {next.substitutions.map((s, i) => {
             const out = matchPlayers.find(p => p.id === s.out_player_id);
@@ -408,10 +388,10 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
             if (!out || !inn) return null;
             return (
               <div key={i} style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <span style={{ color: '#E53935', fontWeight: 500 }}>↓ {out.first_name} {out.last_name_initial}</span>
-                <span style={{ color: '#9E9E9E' }}>→</span>
-                <span style={{ color: '#43A047', fontWeight: 500 }}>↑ {inn.first_name} {inn.last_name_initial}</span>
-                <span style={{ color: '#9E9E9E', fontSize: 12 }}>({s.to_position})</span>
+                <span style={{ color: '#EF4444', fontWeight: 600 }}>↓ {out.first_name} {out.last_name_initial}</span>
+                <span style={{ color: '#D1D5DB' }}>→</span>
+                <span style={{ color: '#22C55E', fontWeight: 600 }}>↑ {inn.first_name} {inn.last_name_initial}</span>
+                <span style={{ color: '#9CA3AF', fontSize: 12 }}>({s.to_position})</span>
               </div>
             );
           })}
@@ -421,28 +401,39 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
       {/* Comments */}
       {userEmail && <MatchComments matchId={currentMatch.id} userEmail={userEmail} />}
 
-      {/* Play time stats */}
-      <div style={{ marginTop: 20, background: '#fff', borderRadius: 8, border: '1px solid #e0e0e0', padding: 16 }}>
-        <div style={{ fontWeight: 500, color: '#202124', marginBottom: 12, fontSize: 15 }}>⏱ Speltid</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* Play time — circular arcs */}
+      <div style={{ ...card, marginTop: 16 }}>
+        <div style={{ fontWeight: 700, color: '#1A1A1A', marginBottom: 16, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Clock size={16} color="#6366F1" />
+          Speltid
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'flex-start' }}>
           {sortedByTime.map(p => {
             const time = timeStats[p.id] || 0;
             const pct = Math.min(100, Math.round((time / totalTime) * 100));
+            const r = 22, stroke = 6;
+            const circ = 2 * Math.PI * r;
+            const dash = (pct / 100) * circ;
             return (
-              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 76, fontSize: 13, fontWeight: 500, color: '#202124', flexShrink: 0 }}>
-                  {p.first_name} {p.last_name_initial}
+              <div key={p.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 56 }}>
+                <div style={{ position: 'relative', width: 56, height: 56 }}>
+                  <svg width="56" height="56" viewBox="0 0 56 56">
+                    <circle cx="28" cy="28" r={r} fill="none" stroke="#E5E7EB" strokeWidth={stroke} />
+                    <circle cx="28" cy="28" r={r} fill="none" stroke="#6366F1" strokeWidth={stroke}
+                      strokeDasharray={`${dash} ${circ}`}
+                      strokeLinecap="round"
+                      transform="rotate(-90 28 28)"
+                      style={{ transition: 'stroke-dasharray 0.3s ease-out' }}
+                    />
+                  </svg>
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#1A1A1A' }}>
+                    {pct}%
+                  </div>
                 </div>
-                <div style={{ flex: 1, background: '#f1f3f4', borderRadius: 4, height: 8, overflow: 'hidden' }}>
-                  <div style={{
-                    width: `${pct}%`, height: '100%', borderRadius: 4,
-                    background: pct >= 75 ? '#43A047' : pct >= 45 ? '#1a73e8' : '#FB8C00',
-                    transition: 'width 0.3s',
-                  }} />
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#1A1A1A', textAlign: 'center', lineHeight: 1.2, maxWidth: 56, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {p.first_name}
                 </div>
-                <div style={{ width: 48, fontSize: 12, color: '#5f6368', textAlign: 'right', flexShrink: 0 }}>
-                  {time} min
-                </div>
+                <div style={{ fontSize: 10, color: '#6B7280' }}>{time}m</div>
               </div>
             );
           })}
@@ -451,3 +442,7 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
     </div>
   );
 }
+
+const card: React.CSSProperties = { background: '#fff', borderRadius: 20, padding: '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' };
+const primaryBtn: React.CSSProperties = { background: '#C8E64C', color: '#1A1A1A', border: 'none', borderRadius: 10, padding: '8px 16px', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 };
+const secondaryBtn: React.CSSProperties = { background: '#fff', color: '#1A1A1A', border: '1.5px solid #E5E7EB', borderRadius: 10, padding: '7px 14px', fontWeight: 500, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' };

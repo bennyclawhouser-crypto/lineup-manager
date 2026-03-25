@@ -125,7 +125,10 @@ function TopBar({ title, showBack, onBack, userEmail, onSignOut }: {
           <ChevronRight size={18} color="#1A1A1A" style={{ transform: 'rotate(180deg)' }} />
         </button>
       )}
-      <span style={{ fontWeight: 700, fontSize: 20, color: '#1A1A1A', flex: 1 }}>{title}</span>
+      {!showBack && (
+        <img src="/lineup-manager/logo.png" alt="Lineup Manager" style={{ height: 28, objectFit: 'contain' }} />
+      )}
+      {showBack && <span style={{ fontWeight: 700, fontSize: 20, color: '#1A1A1A', flex: 1 }}>{title}</span>}
       {userEmail && onSignOut && (
         <button onClick={onSignOut} style={{
           background: 'rgba(255,255,255,0.7)', border: 'none', borderRadius: 10,

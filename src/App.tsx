@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Users, Calendar, LogOut, ChevronRight } from 'lucide-react';
 import PlayersPage from './pages/PlayersPage';
 import MatchesPage from './pages/MatchesPage';
 import MatchPlanPage from './pages/MatchPlanPage';
@@ -12,7 +13,7 @@ type Tab = 'matches' | 'players';
 
 export default function App() {
   const { user, loading: authLoading, signOut } = useAuth();
-  const { players, matches, loading: dataLoading, upsertPlayer, deletePlayer, createMatch, updateMatchPlayers } = useTeamData();
+  const { players, matches, upsertPlayer, deletePlayer, createMatch, updateMatchPlayers } = useTeamData();
   const [tab, setTab] = useState<Tab>('matches');
   const [activeMatch, setActiveMatch] = useState<Match | null>(null);
 
@@ -24,102 +25,115 @@ export default function App() {
     setActiveMatch(m);
   };
 
-  const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: 'matches', label: 'Matcher', icon: '⚽' },
-    { id: 'players', label: 'Truppen', icon: '👥' },
-  ];
-
   if (activeMatch) {
     return (
-      <Shell>
-        <TopBar title={activeMatch.opponent || 'Match'} onBack={() => setActiveMatch(null)} />
-        <MatchPlanPage match={activeMatch} players={players} onBack={() => setActiveMatch(null)} onUpdateMatchPlayers={updateMatchPlayers} />
-      </Shell>
+      <div style={{ minHeight: '100vh', background: '#D9EC6E', fontFamily: 'Inter, sans-serif' }}>
+        <TopBar
+          title={activeMatch.opponent || 'Match'}
+          showBack
+          onBack={() => setActiveMatch(null)}
+        />
+        <div style={{ padding: '0 16px 24px', maxWidth: 680, margin: '0 auto' }}>
+          <MatchPlanPage
+            match={activeMatch}
+            players={players}
+            onBack={() => setActiveMatch(null)}
+            onUpdateMatchPlayers={updateMatchPlayers}
+          />
+        </div>
+      </div>
     );
   }
 
   return (
-    <Shell>
+    <div style={{ minHeight: '100vh', background: '#D9EC6E', fontFamily: 'Inter, sans-serif' }}>
       <TopBar title="Lineup Manager" userEmail={user.email} onSignOut={signOut} />
-      <FeedbackButton />
-      <div style={{ paddingBottom: 72 }}>
+
+      <div style={{ padding: '0 16px 88px', maxWidth: 680, margin: '0 auto' }}>
         {tab === 'matches' && (
           <MatchesPage
-            matches={matches} players={players}
+            matches={matches}
+            players={players}
             onCreateMatch={handleCreateMatch}
             onSelectMatch={setActiveMatch}
             onUpsertPlayer={upsertPlayer}
-            loading={dataLoading}
           />
         )}
         {tab === 'players' && (
-          <PlayersPage
-            players={players}
-            onUpsert={upsertPlayer}
-            onDelete={deletePlayer}
-          />
+          <PlayersPage players={players} onUpsert={upsertPlayer} onDelete={deletePlayer} />
         )}
       </div>
 
       {/* Bottom nav */}
-      <div style={{
+      <nav style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
-        background: '#fff', borderTop: '1px solid #e0e0e0',
-        display: 'flex', height: 64,
+        background: '#fff',
+        boxShadow: '0 -2px 12px rgba(0,0,0,0.08)',
+        display: 'flex', height: 68,
+        borderRadius: '20px 20px 0 0',
       }}>
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
+        {([
+          { id: 'matches' as Tab, label: 'Matcher', Icon: Calendar },
+          { id: 'players' as Tab, label: 'Truppen', Icon: Users },
+        ]).map(({ id, label, Icon }) => (
+          <button key={id} onClick={() => setTab(id)} style={{
             flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-            justifyContent: 'center', gap: 2, border: 'none', background: 'none',
-            cursor: 'pointer', padding: 0,
-            color: tab === t.id ? '#1a73e8' : '#5f6368',
+            justifyContent: 'center', gap: 4, border: 'none', background: 'none',
+            cursor: 'pointer', padding: 0, transition: 'all 150ms ease-out',
           }}>
             <div style={{
-              width: 64, height: 32, borderRadius: 16,
-              background: tab === t.id ? '#e8f0fe' : 'transparent',
+              width: 40, height: 28, borderRadius: 14,
+              background: tab === id ? '#C8E64C' : 'transparent',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 18,
+              transition: 'background 150ms ease-out',
             }}>
-              {t.icon}
+              <Icon size={18} color={tab === id ? '#1A1A1A' : '#6B7280'} strokeWidth={tab === id ? 2.5 : 1.8} />
             </div>
-            <span style={{ fontSize: 12, fontWeight: tab === t.id ? 600 : 400 }}>{t.label}</span>
+            <span style={{
+              fontSize: 12, fontWeight: tab === id ? 600 : 400,
+              color: tab === id ? '#1A1A1A' : '#6B7280',
+            }}>{label}</span>
           </button>
         ))}
-      </div>
-    </Shell>
-  );
-}
+      </nav>
 
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fa', fontFamily: "'Google Sans', Roboto, system-ui, sans-serif" }}>
-      {children}
+      <FeedbackButton />
     </div>
   );
 }
 
-function TopBar({ title, onBack, userEmail, onSignOut }: {
-  title: string; onBack?: () => void; userEmail?: string; onSignOut?: () => void;
+function TopBar({ title, showBack, onBack, userEmail, onSignOut }: {
+  title: string;
+  showBack?: boolean;
+  onBack?: () => void;
+  userEmail?: string;
+  onSignOut?: () => void;
 }) {
   return (
     <div style={{
-      background: '#fff', borderBottom: '1px solid #e0e0e0',
-      padding: '0 16px', height: 56,
+      background: 'transparent',
+      padding: '20px 20px 12px',
       display: 'flex', alignItems: 'center', gap: 12,
-      position: 'sticky', top: 0, zIndex: 50,
+      maxWidth: 680, margin: '0 auto', width: '100%',
     }}>
-      {onBack ? (
-        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#5f6368', borderRadius: '50%', display: 'flex' }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/>
-          </svg>
+      {showBack && onBack && (
+        <button onClick={onBack} style={{
+          background: '#fff', border: 'none', borderRadius: '50%',
+          width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.1)', cursor: 'pointer', flexShrink: 0,
+        }}>
+          <ChevronRight size={18} color="#1A1A1A" style={{ transform: 'rotate(180deg)' }} />
         </button>
-      ) : (
-        <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#1a73e8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>⚽</div>
       )}
-      <span style={{ fontWeight: 500, fontSize: 18, color: '#202124', flex: 1 }}>{title}</span>
+      <span style={{ fontWeight: 700, fontSize: 20, color: '#1A1A1A', flex: 1 }}>{title}</span>
       {userEmail && onSignOut && (
-        <button onClick={onSignOut} style={{ background: 'none', border: '1px solid #dadce0', borderRadius: 20, padding: '4px 12px', cursor: 'pointer', fontSize: 12, color: '#5f6368', fontWeight: 500 }}>
+        <button onClick={onSignOut} style={{
+          background: 'rgba(255,255,255,0.7)', border: 'none', borderRadius: 10,
+          padding: '6px 12px', cursor: 'pointer', fontSize: 13,
+          color: '#6B7280', fontWeight: 500,
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          <LogOut size={14} color="#6B7280" />
           Logga ut
         </button>
       )}
@@ -129,10 +143,12 @@ function TopBar({ title, onBack, userEmail, onSignOut }: {
 
 function Splash() {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8f9fa', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#D9EC6E' }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 56 }}>⚽</div>
-        <div style={{ marginTop: 16, color: '#5f6368', fontSize: 15 }}>Laddar...</div>
+        <div style={{ width: 64, height: 64, background: '#fff', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 2px 12px rgba(0,0,0,0.1)' }}>
+          <Calendar size={28} color="#1A1A1A" />
+        </div>
+        <div style={{ color: '#1A1A1A', fontSize: 15, fontWeight: 500 }}>Laddar...</div>
       </div>
     </div>
   );

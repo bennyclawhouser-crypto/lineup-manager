@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Calendar } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 export default function AuthPage() {
@@ -26,20 +27,23 @@ export default function AuthPage() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#f8f9fa',
+      minHeight: '100vh', background: '#D9EC6E',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontFamily: "'Google Sans', Roboto, system-ui, sans-serif",
-      padding: 16,
+      fontFamily: 'Inter, sans-serif', padding: 20,
     }}>
       <div style={{
-        background: '#fff', borderRadius: 8, padding: '40px 36px',
-        width: '100%', maxWidth: 400,
-        boxShadow: '0 2px 10px rgba(0,0,0,0.12)',
+        background: '#fff', borderRadius: 24, padding: '40px 32px',
+        width: '100%', maxWidth: 380,
+        boxShadow: '0 2px 12px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04)',
         textAlign: 'center',
       }}>
-        <div style={{ fontSize: 48, marginBottom: 8 }}>⚽</div>
-        <h1 style={{ fontSize: 24, fontWeight: 500, color: '#202124', marginBottom: 4 }}>Lineup Manager</h1>
-        <p style={{ fontSize: 14, color: '#5f6368', marginBottom: 32 }}>
+        {/* Logo */}
+        <div style={{ width: 56, height: 56, background: '#C8E64C', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+          <Calendar size={26} color="#1A1A1A" />
+        </div>
+
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1A1A1A', marginBottom: 6 }}>Lineup Manager</h1>
+        <p style={{ fontSize: 14, color: '#6B7280', marginBottom: 28 }}>
           {mode === 'login' ? 'Logga in för att fortsätta' : 'Skapa tränarkonto'}
         </p>
 
@@ -50,25 +54,26 @@ export default function AuthPage() {
           autoFocus
         />
         <input
-          style={{ ...inputStyle, marginTop: 12 }} type="password" placeholder="Lösenord"
+          style={{ ...inputStyle, marginTop: 10 }} type="password" placeholder="Lösenord"
           value={password} onChange={e => setPassword(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && submit()}
         />
 
-        {error && <p style={{ color: '#E53935', fontSize: 13, marginTop: 8, textAlign: 'left' }}>{error}</p>}
-        {info && <p style={{ color: '#43A047', fontSize: 13, marginTop: 8, textAlign: 'left' }}>{info}</p>}
+        {error && <p style={{ color: '#EF4444', fontSize: 13, marginTop: 8, textAlign: 'left' }}>{error}</p>}
+        {info && <p style={{ color: '#22C55E', fontSize: 13, marginTop: 8, textAlign: 'left' }}>{info}</p>}
 
         <button onClick={submit} disabled={loading || !email || !password}
           style={{
-            width: '100%', marginTop: 24, padding: '12px',
-            background: '#1a73e8', color: '#fff', border: 'none',
-            borderRadius: 4, fontSize: 15, fontWeight: 500, cursor: 'pointer',
-            opacity: loading || !email || !password ? 0.6 : 1,
+            width: '100%', marginTop: 20, padding: '12px',
+            background: '#C8E64C', color: '#1A1A1A', border: 'none',
+            borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer',
+            opacity: loading || !email || !password ? 0.5 : 1,
+            transition: 'background 150ms ease-out',
           }}>
           {loading ? '...' : mode === 'login' ? 'Logga in' : 'Skapa konto'}
         </button>
 
-        <div style={{ marginTop: 20, fontSize: 14, color: '#5f6368' }}>
+        <div style={{ marginTop: 20, fontSize: 14, color: '#6B7280' }}>
           {mode === 'login' ? (
             <>Ny tränare? <button style={linkBtn} onClick={() => setMode('signup')}>Skapa konto</button></>
           ) : (
@@ -81,11 +86,13 @@ export default function AuthPage() {
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '12px 14px', borderRadius: 4,
-  border: '1px solid #dadce0', fontSize: 15, boxSizing: 'border-box',
-  color: '#202124', outline: 'none', textAlign: 'left',
+  width: '100%', padding: '12px 14px', borderRadius: 10,
+  border: '1.5px solid #E5E7EB', fontSize: 14, boxSizing: 'border-box',
+  color: '#1A1A1A', outline: 'none', background: '#fff', textAlign: 'left',
+  transition: 'border-color 150ms ease-out',
 };
 const linkBtn: React.CSSProperties = {
-  background: 'none', border: 'none', color: '#1a73e8',
-  cursor: 'pointer', fontSize: 14, fontWeight: 500, padding: 0,
+  background: 'none', border: 'none', color: '#1A1A1A',
+  cursor: 'pointer', fontSize: 14, fontWeight: 600, padding: 0,
+  textDecoration: 'underline',
 };

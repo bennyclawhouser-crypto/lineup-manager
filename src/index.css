@@ -1,22 +1,33 @@
-@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'Google Sans', Roboto, system-ui, -apple-system, sans-serif;
-  background: #f8f9fa;
-  color: #202124;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #D9EC6E;
+  color: #1A1A1A;
   -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
 }
 
-button { font-family: inherit; }
-input, select { font-family: inherit; }
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; }
 
-input:focus, select:focus {
+input:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: #1a73e8 !important;
-  box-shadow: 0 0 0 2px rgba(26,115,232,0.2);
+  border-color: #C8E64C !important;
+  box-shadow: 0 0 0 3px rgba(200,230,76,0.25);
 }
 
-/* Hover states */
-[style*="cursor: pointer"]:hover { opacity: 0.88; }
+/* Card */
+.card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 20px 24px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Plus, ChevronRight, Users } from 'lucide-react';
 import type { Match, MatchSettings, Player } from '../types';
 import SportadminImport from '../components/SportadminImport';
 
@@ -8,13 +9,10 @@ interface Props {
   onCreateMatch: (m: Match) => Promise<void>;
   onSelectMatch: (m: Match) => void;
   onUpsertPlayer?: (p: Player) => Promise<void>;
-  loading?: boolean;
 }
 
 const DEFAULT_SETTINGS: MatchSettings = {
-  periods: 3,
-  period_minutes: 25,
-  sub_interval_minutes: 12.5,
+  periods: 3, period_minutes: 25, sub_interval_minutes: 12.5,
 };
 
 export default function MatchesPage({ matches, players, onCreateMatch, onSelectMatch, onUpsertPlayer }: Props) {
@@ -25,7 +23,6 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
   const [playersOnField, setPlayersOnField] = useState(9);
   const [pendingNewNames, setPendingNewNames] = useState<string[]>([]);
 
-
   const togglePlayer = (id: string) =>
     setSelectedPlayers(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
 
@@ -34,188 +31,140 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
 
   const handleImportConfirm = async ({ matchedIds, unmatchedNames }: { matchedIds: string[]; unmatchedNames: string[] }) => {
     const newIds: string[] = [];
-
     if (onUpsertPlayer && unmatchedNames.length > 0) {
       for (const fullName of unmatchedNames) {
         const parts = fullName.trim().split(/\s+/);
-        const first_name = parts[0] ?? fullName;
-        const last_name_initial = parts.length > 1 ? parts[parts.length - 1][0].toUpperCase() + '.' : '';
         const newPlayer: Player = {
-          id: crypto.randomUUID(),
-          team_id: 'default',
-          first_name,
-          last_name_initial,
-          full_name: fullName,
-          position_1: 'CM',
-          always_goalkeeper: false,
-          extra_time: false,
-          less_time: false,
+          id: crypto.randomUUID(), team_id: 'default',
+          first_name: parts[0] ?? fullName,
+          last_name_initial: parts.length > 1 ? parts[parts.length - 1][0].toUpperCase() + '.' : '',
+          full_name: fullName, position_1: 'CM',
+          always_goalkeeper: false, extra_time: false, less_time: false,
         };
         await onUpsertPlayer(newPlayer);
         newIds.push(newPlayer.id);
       }
     }
-
     setSelectedPlayers([...matchedIds, ...newIds]);
-    setPendingNewNames([]); // all handled
+    setPendingNewNames([]);
     setStep('settings');
   };
 
   const create = async () => {
     const match: Match = {
-      id: crypto.randomUUID(),
-      team_id: 'default',
+      id: crypto.randomUUID(), team_id: 'default',
       date: new Date().toISOString().slice(0, 10),
-      opponent: opponent || undefined,
-      settings,
-      player_ids: selectedPlayers,
+      opponent: opponent || undefined, settings, player_ids: selectedPlayers,
       created_at: new Date().toISOString(),
     };
     await onCreateMatch(match);
-    setStep('list');
-
-    setOpponent('');
-    setSelectedPlayers([]);
-    setPendingNewNames([]);
-    setSettings({ ...DEFAULT_SETTINGS });
-    onSelectMatch(match);
+    setStep('list'); setOpponent(''); setSelectedPlayers([]);
+    setPendingNewNames([]); setSettings({ ...DEFAULT_SETTINGS });
   };
 
-  const fmt = (m: Match) => {
-    const d = new Date(m.date);
-    return d.toLocaleDateString('sv-SE', { weekday: 'long', month: 'short', day: 'numeric' });
-  };
+  const fmt = (m: Match) => new Date(m.date).toLocaleDateString('sv-SE', { weekday: 'long', month: 'short', day: 'numeric' });
 
   return (
-    <div style={{ padding: '16px', maxWidth: 600, margin: '0 auto' }}>
+    <div style={{ paddingTop: 8 }}>
+      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 500, color: '#202124' }}>Matcher</h2>
-        <button onClick={() => { setPendingNewNames([]); setSelectedPlayers([]); setStep('import'); }} style={fabBtn}>
-          <span style={{ fontSize: 20, marginRight: 6 }}>+</span> Ny match
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#1A1A1A' }}>Matcher</h2>
+        <button onClick={() => { setPendingNewNames([]); setSelectedPlayers([]); setStep('import'); }}
+          style={primaryBtn}>
+          <Plus size={16} color="#1A1A1A" strokeWidth={2.5} />
+          Ny match
         </button>
       </div>
 
+      {/* Empty state */}
       {matches.length === 0 && step === 'list' && (
-        <div style={emptyState}>
-          <div style={{ fontSize: 56 }}>⚽</div>
-          <div style={{ fontSize: 18, fontWeight: 500, color: '#202124', marginTop: 16 }}>Inga matcher ännu</div>
-          <div style={{ fontSize: 14, color: '#5f6368', marginTop: 8 }}>Skapa din första match för att komma igång.</div>
-          <button onClick={() => { setPendingNewNames([]); setSelectedPlayers([]); setStep('import'); }} style={{ ...fabBtn, marginTop: 24 }}>+ Ny match</button>
+        <div style={{ ...card, textAlign: 'center', padding: '48px 24px' }}>
+          <div style={{ width: 56, height: 56, background: '#F3F4F6', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <Users size={24} color="#6B7280" />
+          </div>
+          <p style={{ fontWeight: 600, fontSize: 16, color: '#1A1A1A', marginBottom: 6 }}>Inga matcher ännu</p>
+          <p style={{ fontSize: 14, color: '#6B7280', marginBottom: 24 }}>Skapa din första match för att komma igång</p>
+          <button onClick={() => { setPendingNewNames([]); setSelectedPlayers([]); setStep('import'); }} style={primaryBtn}>
+            <Plus size={16} color="#1A1A1A" />
+            Ny match
+          </button>
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* Match list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {[...matches].reverse().map(m => (
-          <div key={m.id} style={listItem} onClick={() => onSelectMatch(m)}>
-            <div style={{ ...avatar, background: '#1a73e8' }}>⚽</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 500, color: '#202124', fontSize: 15 }}>
+          <div key={m.id} style={{ ...card, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', transition: 'box-shadow 150ms ease-out' }}
+            onClick={() => onSelectMatch(m)}>
+            <div style={{ width: 44, height: 44, background: '#C8E64C', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Users size={20} color="#1A1A1A" />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: 15, color: '#1A1A1A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {m.opponent || 'Okänd motståndare'}
               </div>
-              <div style={{ fontSize: 13, color: '#5f6368', marginTop: 2 }}>
-                {fmt(m)} · {m.player_ids.length} spelare · {m.settings.periods}×{m.settings.period_minutes} min
+              <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>
+                {fmt(m)} · {m.player_ids.length} spelare
               </div>
             </div>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="#bdc1c6">
-              <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/>
-            </svg>
+            <ChevronRight size={18} color="#D1D5DB" />
           </div>
         ))}
       </div>
 
-      {/* Step: Sportadmin import */}
+      {/* Import modal */}
       {step === 'import' && (
-        <div style={modalBackdrop} onClick={() => setStep('list')}>
-          <div style={modalBox} onClick={e => e.stopPropagation()}>
-            <SportadminImport
-              existingPlayers={players}
-              onConfirm={handleImportConfirm}
-              onSkip={() => setStep('settings')}
-            />
-          </div>
-        </div>
+        <Modal onClose={() => setStep('list')}>
+          <SportadminImport existingPlayers={players} onConfirm={handleImportConfirm} onSkip={() => setStep('settings')} onCancel={() => setStep('list')} />
+        </Modal>
       )}
 
-      {/* Step: Match settings */}
+      {/* Settings modal */}
       {step === 'settings' && (
-        <div style={modalBackdrop} onClick={() => setStep('list')}>
-          <div style={modalBox} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 20px', fontWeight: 500, fontSize: 18, color: '#202124' }}>Matchinställningar</h3>
+        <Modal onClose={() => setStep('list')}>
+          <h3 style={{ fontSize: 18, fontWeight: 700, color: '#1A1A1A', marginBottom: 20 }}>Matchinställningar</h3>
 
-            <Field label="Motståndare (valfritt)">
-              <input style={input} value={opponent} placeholder="IFK Göteborg"
-                onChange={e => setOpponent(e.target.value)} autoFocus />
-            </Field>
+          <Field label="Motståndare">
+            <input style={inputStyle} value={opponent} placeholder="IFK Göteborg" onChange={e => setOpponent(e.target.value)} autoFocus />
+          </Field>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <Field label="Spelare på plan">
-                <input style={input} type="number" value={playersOnField} min={1} max={11}
-                  onChange={e => setPlayersOnField(Number(e.target.value))} />
-              </Field>
-              <Field label="Antal perioder">
-                <input style={input} type="number" value={settings.periods} min={1} max={6}
-                  onChange={e => setSettings({ ...settings, periods: Number(e.target.value) })} />
-              </Field>
-              <Field label="Min per period">
-                <input style={input} type="number" value={settings.period_minutes} min={5} max={45}
-                  onChange={e => setSettings({ ...settings, period_minutes: Number(e.target.value) })} />
-              </Field>
-              <Field label="Bytesintervall (min)">
-                <input style={input} type="number" value={settings.sub_interval_minutes} min={1} max={45} step={0.5}
-                  onChange={e => setSettings({ ...settings, sub_interval_minutes: Number(e.target.value) })} />
-              </Field>
-            </div>
-
-            {pendingNewNames.length > 0 && (
-              <div style={{ background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: 8, padding: '10px 14px', marginBottom: 16 }}>
-                <div style={{ fontWeight: 500, color: '#2E7D32', fontSize: 13 }}>
-                  ✅ {pendingNewNames.length} nya spelare läggs automatiskt till i truppen
-                </div>
-              </div>
-            )}
-
-            <div style={{ marginBottom: 4 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <label style={fieldLabel}>Spelare ({selectedPlayers.length}/{players.length} valda)</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button style={linkBtn} onClick={selectAll}>Välj alla</button>
-                  <button style={linkBtn} onClick={clearAll}>Rensa</button>
-                </div>
-              </div>
-              <div style={{ border: '1px solid #dadce0', borderRadius: 4, maxHeight: 200, overflowY: 'auto' }}>
-                {players.length === 0 && (
-                  <div style={{ padding: 16, color: '#5f6368', fontSize: 14 }}>Lägg till spelare i Truppen först.</div>
-                )}
-                {players.map((p, i) => (
-                  <label key={p.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
-                    cursor: 'pointer', borderTop: i > 0 ? '1px solid #f1f3f4' : 'none',
-                    background: selectedPlayers.includes(p.id) ? '#e8f0fe' : 'transparent',
-                  }}>
-                    <input type="checkbox" checked={selectedPlayers.includes(p.id)} onChange={() => togglePlayer(p.id)} />
-                    <span style={{ flex: 1, fontSize: 14, color: '#202124' }}>
-                      {p.first_name} {p.last_name_initial}
-                    </span>
-                    {p.always_goalkeeper && <span style={{ fontSize: 12, color: '#F9A825', fontWeight: 600 }}>MV</span>}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 24 }}>
-              <button style={textBtn('#5f6368')} onClick={() => setStep('import')}>← Tillbaka</button>
-              <button style={{ ...containedBtn, opacity: selectedPlayers.length < playersOnField ? 0.5 : 1 }}
-                onClick={create} disabled={selectedPlayers.length < playersOnField}>
-                Skapa match
-              </button>
-            </div>
-            {selectedPlayers.length < playersOnField && (
-              <p style={{ fontSize: 12, color: '#E53935', margin: '8px 0 0', textAlign: 'right' }}>
-                Välj minst {playersOnField} spelare.
-              </p>
-            )}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Field label="Spelare på plan"><input style={inputStyle} type="number" value={playersOnField} min={1} max={11} onChange={e => setPlayersOnField(Number(e.target.value))} /></Field>
+            <Field label="Antal perioder"><input style={inputStyle} type="number" value={settings.periods} min={1} max={6} onChange={e => setSettings({ ...settings, periods: Number(e.target.value) })} /></Field>
+            <Field label="Min/period"><input style={inputStyle} type="number" value={settings.period_minutes} min={5} max={45} onChange={e => setSettings({ ...settings, period_minutes: Number(e.target.value) })} /></Field>
+            <Field label="Bytesintervall"><input style={inputStyle} type="number" value={settings.sub_interval_minutes} min={1} max={45} step={0.5} onChange={e => setSettings({ ...settings, sub_interval_minutes: Number(e.target.value) })} /></Field>
           </div>
-        </div>
+
+          {pendingNewNames.length > 0 && (
+            <div style={{ background: '#F0FDF4', border: '1px solid #86EFAC', borderRadius: 10, padding: '10px 14px', marginBottom: 4, fontSize: 13, color: '#15803D' }}>
+              {pendingNewNames.length} nya spelare läggs till i truppen automatiskt
+            </div>
+          )}
+
+          <Field label={`Spelare (${selectedPlayers.length}/${players.length})`}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <button style={ghostBtn} onClick={selectAll}>Välj alla</button>
+              <button style={ghostBtn} onClick={clearAll}>Rensa</button>
+            </div>
+            <div style={{ border: '1.5px solid #E5E7EB', borderRadius: 12, maxHeight: 220, overflowY: 'auto' }}>
+              {players.length === 0 && <div style={{ padding: 16, color: '#9CA3AF', fontSize: 14 }}>Lägg till spelare i Truppen först</div>}
+              {players.map((p, i) => (
+                <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderTop: i > 0 ? '1px solid #F3F4F6' : 'none', cursor: 'pointer', background: selectedPlayers.includes(p.id) ? '#FAFFF0' : 'transparent' }}>
+                  <input type="checkbox" checked={selectedPlayers.includes(p.id)} onChange={() => togglePlayer(p.id)} style={{ accentColor: '#C8E64C', width: 16, height: 16 }} />
+                  <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: '#1A1A1A' }}>{p.first_name} {p.last_name_initial}</span>
+                  {p.always_goalkeeper && <span style={{ fontSize: 11, color: '#F59E0B', fontWeight: 700, background: '#FEF3C7', padding: '2px 8px', borderRadius: 99 }}>MV</span>}
+                </label>
+              ))}
+            </div>
+          </Field>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+            <button style={secondaryBtn} onClick={() => setStep('import')}>Tillbaka</button>
+            <button style={{ ...primaryBtn, opacity: selectedPlayers.length < playersOnField ? 0.4 : 1 }} onClick={create} disabled={selectedPlayers.length < playersOnField}>
+              Skapa match
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );
@@ -223,58 +172,27 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: 16 }}>
-      <label style={fieldLabel}>{label}</label>
+    <div style={{ marginBottom: 14 }}>
+      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6B7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</label>
       {children}
     </div>
   );
 }
 
-const fieldLabel: React.CSSProperties = {
-  display: 'block', fontSize: 12, fontWeight: 500, color: '#5f6368',
-  marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px',
-};
-const fabBtn: React.CSSProperties = {
-  background: '#1a73e8', color: '#fff', border: 'none', borderRadius: 24,
-  padding: '8px 20px', cursor: 'pointer', fontWeight: 500, fontSize: 14,
-  display: 'flex', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-};
-const listItem: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 14,
-  padding: '12px 16px', borderRadius: 8, cursor: 'pointer',
-  background: '#fff',
-};
-const avatar: React.CSSProperties = {
-  width: 40, height: 40, borderRadius: '50%',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  color: '#fff', fontWeight: 700, fontSize: 18, flexShrink: 0,
-};
-const emptyState: React.CSSProperties = {
-  textAlign: 'center', padding: '60px 20px',
-};
-const input: React.CSSProperties = {
-  width: '100%', padding: '10px 12px', borderRadius: 4,
-  border: '1px solid #dadce0', fontSize: 14, boxSizing: 'border-box',
-  outline: 'none', color: '#202124',
-};
-const containedBtn: React.CSSProperties = {
-  background: '#1a73e8', color: '#fff', border: 'none', borderRadius: 4,
-  padding: '8px 22px', cursor: 'pointer', fontWeight: 500, fontSize: 14,
-};
-const textBtn = (color: string): React.CSSProperties => ({
-  background: 'none', color, border: 'none', borderRadius: 4,
-  padding: '8px 16px', cursor: 'pointer', fontWeight: 500, fontSize: 14,
-});
-const linkBtn: React.CSSProperties = {
-  background: 'none', color: '#1a73e8', border: 'none',
-  cursor: 'pointer', fontWeight: 500, fontSize: 13, padding: '2px 4px',
-};
-const modalBackdrop: React.CSSProperties = {
-  position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
-};
-const modalBox: React.CSSProperties = {
-  background: '#fff', borderRadius: 8, padding: 24,
-  width: '90%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto',
-  boxShadow: '0 24px 38px rgba(0,0,0,0.14)',
-};
+function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200, padding: '0 0 0' }}
+      onClick={onClose}>
+      <div style={{ background: '#fff', borderRadius: '24px 24px 0 0', padding: 24, width: '100%', maxWidth: 520, maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 -4px 24px rgba(0,0,0,0.12)' }}
+        onClick={e => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+const card: React.CSSProperties = { background: '#fff', borderRadius: 20, padding: '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04)' };
+const primaryBtn: React.CSSProperties = { background: '#C8E64C', color: '#1A1A1A', border: 'none', borderRadius: 10, padding: '10px 20px', fontWeight: 600, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'background 150ms ease-out' };
+const secondaryBtn: React.CSSProperties = { background: '#fff', color: '#1A1A1A', border: '1.5px solid #E5E7EB', borderRadius: 10, padding: '8px 16px', fontWeight: 500, fontSize: 14, cursor: 'pointer' };
+const ghostBtn: React.CSSProperties = { background: 'transparent', color: '#6B7280', border: 'none', padding: '4px 8px', fontSize: 13, fontWeight: 500, cursor: 'pointer' };
+const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #E5E7EB', fontSize: 14, boxSizing: 'border-box', color: '#1A1A1A', outline: 'none' };

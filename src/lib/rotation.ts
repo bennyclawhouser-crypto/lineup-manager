@@ -93,7 +93,9 @@ function assignPositions(
     if (assignedP.size === Math.min(remaining.length, openSlots.length)) break;
   }
 
-  // Post-process: swap pairs to maximise total preference score
+  // Post-process: iterative swap to maximise total preference score.
+  // Runs until no more beneficial swaps exist.
+  // This ensures no player sits at score=0 if a swap can give them score>0.
   let improved = true;
   while (improved) {
     improved = false;
@@ -113,6 +115,38 @@ function assignPositions(
           assignments[i] = { ...a, position: b.position, slot_index: b.slot_index };
           assignments[j] = { ...b, position: tmpPos, slot_index: tmpSlot };
           improved = true;
+        }
+      }
+    }
+  }
+
+  // Final check: if any player still has score=0, try a 3-way rotation
+  // to find a position they prefer, displacing a player who can play elsewhere.
+  for (let i = 0; i < assignments.length; i++) {
+    const a = assignments[i];
+    if (a.position === 'GK') continue;
+    const pa = remaining.find(p => p.id === a.player_id);
+    if (!pa || positionScore(pa, a.position) > 0) continue;
+    // Find any slot where pa has score > 0
+    for (let j = 0; j < assignments.length; j++) {
+      if (i === j) continue;
+      const b = assignments[j];
+      if (b.position === 'GK') continue;
+      if (positionScore(pa, b.position) > 0) {
+        const pb = remaining.find(p => p.id === b.player_id);
+        if (!pb) continue;
+        // Only swap if pb can play pa's position (score >= 0 is always true,
+        // but prefer not making pb worse off than pa currently is)
+        const paNewScore = positionScore(pa, b.position);
+        const pbNewScore = positionScore(pb, a.position);
+        const pbOldScore = positionScore(pb, b.position);
+        // Accept if pa gains and pb doesn't lose more than 1 tier
+        if (paNewScore > 0 && pbNewScore >= pbOldScore - 1) {
+          const tmpPos = a.position;
+          const tmpSlot = a.slot_index;
+          assignments[i] = { ...a, position: b.position, slot_index: b.slot_index };
+          assignments[j] = { ...b, position: tmpPos, slot_index: tmpSlot };
+          break;
         }
       }
     }

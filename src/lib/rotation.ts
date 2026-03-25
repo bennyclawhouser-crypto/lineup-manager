@@ -93,6 +93,31 @@ function assignPositions(
     if (assignedP.size === Math.min(remaining.length, openSlots.length)) break;
   }
 
+  // Post-process: swap pairs to maximise total preference score
+  let improved = true;
+  while (improved) {
+    improved = false;
+    for (let i = 0; i < assignments.length; i++) {
+      for (let j = i + 1; j < assignments.length; j++) {
+        const a = assignments[i];
+        const b = assignments[j];
+        if (a.position === 'GK' || b.position === 'GK') continue;
+        const pa = remaining.find(p => p.id === a.player_id);
+        const pb = remaining.find(p => p.id === b.player_id);
+        if (!pa || !pb) continue;
+        const curr = positionScore(pa, a.position) + positionScore(pb, b.position);
+        const swap = positionScore(pa, b.position) + positionScore(pb, a.position);
+        if (swap > curr) {
+          const tmpPos = a.position;
+          const tmpSlot = a.slot_index;
+          assignments[i] = { ...a, position: b.position, slot_index: b.slot_index };
+          assignments[j] = { ...b, position: tmpPos, slot_index: tmpSlot };
+          improved = true;
+        }
+      }
+    }
+  }
+
   return assignments;
 }
 

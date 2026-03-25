@@ -13,7 +13,7 @@ type Tab = 'matches' | 'players';
 
 export default function App() {
   const { user, loading: authLoading, signOut } = useAuth();
-  const { players, matches, upsertPlayer, deletePlayer, createMatch, updateMatchPlayers } = useTeamData();
+  const { players, matches, upsertPlayer, deletePlayer, createMatch, deleteMatch, updateMatchPlayers } = useTeamData();
   const [tab, setTab] = useState<Tab>('matches');
   const [activeMatch, setActiveMatch] = useState<Match | null>(null);
 
@@ -57,6 +57,7 @@ export default function App() {
             onCreateMatch={handleCreateMatch}
             onSelectMatch={setActiveMatch}
             onUpsertPlayer={upsertPlayer}
+            onDeleteMatch={deleteMatch}
           />
         )}
         {tab === 'players' && (

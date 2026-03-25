@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, ChevronRight, Users } from 'lucide-react';
+import { Plus, ChevronRight, Users, Trash2 } from 'lucide-react';
 import type { Match, MatchSettings, Player } from '../types';
 import SportadminImport from '../components/SportadminImport';
 
@@ -9,13 +9,15 @@ interface Props {
   onCreateMatch: (m: Match) => Promise<void>;
   onSelectMatch: (m: Match) => void;
   onUpsertPlayer?: (p: Player) => Promise<void>;
+  onDeleteMatch?: (id: string) => Promise<void>;
 }
 
 const DEFAULT_SETTINGS: MatchSettings = {
   periods: 3, period_minutes: 25, sub_interval_minutes: 12.5,
 };
 
-export default function MatchesPage({ matches, players, onCreateMatch, onSelectMatch, onUpsertPlayer }: Props) {
+export default function MatchesPage({ matches, players, onCreateMatch, onSelectMatch, onUpsertPlayer, onDeleteMatch }: Props) {
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [step, setStep] = useState<'list' | 'import' | 'settings'>('list');
   const [opponent, setOpponent] = useState('');
   const [settings, setSettings] = useState<MatchSettings>({ ...DEFAULT_SETTINGS });
@@ -94,23 +96,49 @@ export default function MatchesPage({ matches, players, onCreateMatch, onSelectM
       {/* Match list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {[...matches].reverse().map(m => (
-          <div key={m.id} style={{ ...card, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', transition: 'box-shadow 150ms ease-out' }}
-            onClick={() => onSelectMatch(m)}>
-            <div style={{ width: 44, height: 44, background: '#C8E64C', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Users size={20} color="#1A1A1A" />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 600, fontSize: 15, color: '#1A1A1A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {m.opponent || 'Okänd motståndare'}
+          <div key={m.id} style={{ ...card, display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', position: 'relative' }}>
+            <div onClick={() => onSelectMatch(m)} style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, cursor: 'pointer', minWidth: 0 }}>
+              <div style={{ width: 44, height: 44, background: '#C8E64C', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Users size={20} color="#1A1A1A" />
               </div>
-              <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>
-                {fmt(m)} · {m.player_ids.length} spelare
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 15, color: '#1A1A1A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {m.opponent || 'Okänd motståndare'}
+                </div>
+                <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>
+                  {fmt(m)} · {m.player_ids.length} spelare
+                </div>
               </div>
+              <ChevronRight size={18} color="#D1D5DB" />
             </div>
-            <ChevronRight size={18} color="#D1D5DB" />
+            {onDeleteMatch && (
+              <button onClick={e => { e.stopPropagation(); setConfirmDelete(m.id); }}
+                style={{ background: '#FEF2F2', border: 'none', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+                <Trash2 size={15} color="#EF4444" />
+              </button>
+            )}
           </div>
         ))}
       </div>
+
+      {/* Delete confirm modal */}
+      {confirmDelete && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 24 }}
+          onClick={() => setConfirmDelete(null)}>
+          <div style={{ background: '#fff', borderRadius: 20, padding: 24, width: '100%', maxWidth: 360, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}
+            onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontWeight: 700, fontSize: 18, color: '#1A1A1A', marginBottom: 8 }}>Ta bort match?</h3>
+            <p style={{ fontSize: 14, color: '#6B7280', marginBottom: 24 }}>Matchen och all data (rotation, anteckningar) tas bort permanent.</p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setConfirmDelete(null)} style={{ flex: 1, background: '#F9FAFB', border: '1.5px solid #E5E7EB', borderRadius: 10, padding: '10px', fontWeight: 500, fontSize: 14, cursor: 'pointer', color: '#1A1A1A' }}>Avbryt</button>
+              <button onClick={async () => { await onDeleteMatch!(confirmDelete); setConfirmDelete(null); }}
+                style={{ flex: 1, background: '#EF4444', border: 'none', borderRadius: 10, padding: '10px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#fff' }}>
+                Ta bort
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Import modal */}
       {step === 'import' && (

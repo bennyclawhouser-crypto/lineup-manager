@@ -79,6 +79,13 @@ export function useTeamData() {
     setMatches(prev => prev.map(m => m.id === matchId ? { ...m, player_ids: playerIds } : m));
   };
 
+  const deleteMatch = async (id: string) => {
+    await supabase.from('match_plans').delete().eq('match_id', id);
+    await supabase.from('match_comments').delete().eq('match_id', id);
+    await supabase.from('matches').delete().eq('id', id);
+    setMatches(prev => prev.filter(m => m.id !== id));
+  };
+
   const createMatch = async (match: Match) => {
     const tid = teamId ?? await ensureTeam();
     if (!tid) return;
@@ -90,7 +97,7 @@ export function useTeamData() {
 
   return {
     players, matches, teamId, loading, error,
-    upsertPlayer, deletePlayer, createMatch, updateMatchPlayers,
+    upsertPlayer, deletePlayer, createMatch, deleteMatch, updateMatchPlayers,
     reload: () => teamId && loadData(teamId),
   };
 }

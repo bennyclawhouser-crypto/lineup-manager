@@ -21,13 +21,24 @@ export default function MatchComments({ matchId, userEmail }: Props) {
   const { comments, addComment } = useMatchComments(matchId);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState('');
 
   const send = async () => {
     if (!text.trim()) return;
     setSending(true);
-    const ok = await addComment(text, userEmail);
-    if (ok) setText('');
-    setSending(false);
+    setSendError('');
+    try {
+      const ok = await addComment(text, userEmail);
+      if (ok) {
+        setText('');
+      } else {
+        setSendError('Kunde inte spara. Är du inloggad?');
+      }
+    } catch (e) {
+      setSendError('Något gick fel. Försök igen.');
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -92,9 +103,12 @@ export default function MatchComments({ matchId, userEmail }: Props) {
           padding: '8px 16px', cursor: 'pointer', fontWeight: 500, fontSize: 14,
           opacity: !text.trim() || sending ? 0.5 : 1, flexShrink: 0,
         }}>
-          Skicka
+          {sending ? '...' : 'Skicka'}
         </button>
       </div>
+      {sendError && (
+        <div style={{ padding: '8px 16px', color: '#E53935', fontSize: 13 }}>{sendError}</div>
+      )}
     </div>
   );
 }

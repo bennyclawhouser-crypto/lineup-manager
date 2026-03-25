@@ -39,9 +39,10 @@ export function useMatchComments(matchId: string) {
   const addComment = async (text: string, userEmail: string) => {
     const { error } = await supabase.from('match_comments').insert({
       match_id: matchId,
-      user_email: userEmail,
+      user_email: userEmail || 'anonym',
       text: text.trim(),
     });
+    if (error) console.error('addComment error:', error);
     return !error;
   };
 

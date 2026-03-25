@@ -127,9 +127,8 @@ export function generateRotation(input: RotationInput): PeriodLineup[] {
   const accTime: Record<string, number> = {};
   for (const p of outfield) accTime[p.id] = 0;
 
-  // Track how many times each player has changed position slot
-  const positionChangeCount: Record<string, number> = {};
-  for (const p of outfield) positionChangeCount[p.id] = 0;
+  // Track which players have changed position at least once (unique count)
+  const playersWhoChanged = new Set<string>();
 
   const shuffled = [...outfield].sort(() => Math.random() - 0.5);
   const lineups: PeriodLineup[] = [];
@@ -148,36 +147,39 @@ export function generateRotation(input: RotationInput): PeriodLineup[] {
     if (lineups.length > 0) {
       const prev = lineups[lineups.length - 1];
       const newOnFieldIds = new Set(onFieldOutfield.map(p => p.id));
-      // Players staying on field
+      // Players staying on field — lock their current slot
       const staying = prev.on_field.filter(a => newOnFieldIds.has(a.player_id));
       for (const a of staying) {
-        // Player keeps slot unless they have hit change limit
-        if (positionChangeCount[a.player_id] < maxPositionChangers) {
-          lockedSlots.set(a.slot_index, a.player_id);
-        } else {
-          // Force keep their slot (already used allowance)
-          lockedSlots.set(a.slot_index, a.player_id);
-        }
+        lockedSlots.set(a.slot_index, a.player_id);
       }
-      // Incoming subs: they take the slot of the player they replace
+      // Incoming subs: they take the slot of the player they replace (slot stays open)
       const goingOffSlots = prev.on_field
         .filter(a => !newOnFieldIds.has(a.player_id))
         .map(a => a.slot_index);
-      // Leave those slots open for new players (handled in assignPositions)
       for (const slotIdx of goingOffSlots) {
         lockedSlots.delete(slotIdx);
+      }
+
+      // Check if too many players have changed position — if so, keep everyone locked
+      // (no reshuffling beyond max allowed changers)
+      const wouldChangeCount = playersWhoChanged.size;
+      if (wouldChangeCount >= maxPositionChangers) {
+        // Lock all staying players unconditionally
+        for (const a of staying) {
+          lockedSlots.set(a.slot_index, a.player_id);
+        }
       }
     }
 
     const assignments = assignPositions(onFieldOutfield, formation, gk, lockedSlots);
 
-    // Track position changes
+    // Track unique players who changed position
     if (lineups.length > 0) {
       const prev = lineups[lineups.length - 1];
       for (const a of assignments) {
         const prevA = prev.on_field.find(p => p.player_id === a.player_id);
         if (prevA && prevA.slot_index !== a.slot_index) {
-          positionChangeCount[a.player_id] = (positionChangeCount[a.player_id] || 0) + 1;
+          playersWhoChanged.add(a.player_id);
         }
       }
     }

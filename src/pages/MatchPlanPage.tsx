@@ -359,16 +359,19 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
       </div>
 
       {/* Match settings editor */}
-      <MatchSettingsEditor match={currentMatch} onSave={(newSettings) => {
-        setCurrentMatch(prev => ({ ...prev, settings: newSettings }));
-        const g = generateRotation({ players: matchPlayers, settings: newSettings, playersOnField, formation, maxPositionChangeFraction: maxChangePct / 100 });
-        setLineups(g); saveLineups(g); setActiveIdx(0);
-        if (onUpdateMatchPlayers) {
+      <MatchSettingsEditor
+        match={currentMatch}
+        maxChangePct={maxChangePct}
+        onMaxChangePctChange={setMaxChangePct}
+        onSave={(newSettings, pct) => {
+          setCurrentMatch(prev => ({ ...prev, settings: newSettings }));
+          const g = generateRotation({ players: matchPlayers, settings: newSettings, playersOnField, formation, maxPositionChangeFraction: pct / 100 });
+          setLineups(g); saveLineups(g); setActiveIdx(0);
           import('../lib/supabase').then(({ supabase }) => {
             supabase.from('matches').update({ settings: newSettings }).eq('id', currentMatch.id);
           });
-        }
-      }} />
+        }}
+      />
 
       {/* Play time — circular arcs */}
       <div style={{ ...card, marginTop: 16 }}>
@@ -412,10 +415,16 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
   );
 }
 
-function MatchSettingsEditor({ match, onSave }: { match: Match; onSave: (s: Match['settings']) => void }) {
+function MatchSettingsEditor({ match, onSave, maxChangePct, onMaxChangePctChange }: {
+  match: Match;
+  onSave: (s: Match['settings'], pct: number) => void;
+  maxChangePct: number;
+  onMaxChangePctChange: (v: number) => void;
+}) {
   const [s, setS] = useState({ ...match.settings });
   const [saved, setSaved] = useState(false);
-  const save = () => { onSave(s); setSaved(true); setTimeout(() => setSaved(false), 1500); };
+  const [showInfo, setShowInfo] = useState(false);
+  const save = () => { onSave(s, maxChangePct); setSaved(true); setTimeout(() => setSaved(false), 1500); };
   return (
     <div style={{ ...card, marginTop: 16 }}>
       <div style={{ fontWeight: 700, fontSize: 16, color: '#1A1A1A', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -436,6 +445,29 @@ function MatchSettingsEditor({ match, onSave }: { match: Match; onSave: (s: Matc
           </div>
         ))}
       </div>
+
+      {/* Position change slider */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+          <ArrowLeftRight size={13} color="#6B7280" />
+          <span style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Max positionsbyte</span>
+          <button onClick={() => setShowInfo(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#6B7280' }}>i</div>
+          </button>
+        </div>
+        {showInfo && (
+          <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 10, padding: '10px 14px', marginBottom: 10, fontSize: 13, color: '#374151', lineHeight: 1.5 }}>
+            Styr hur många procent av utespelarna som tillåts byta fysisk position på planen under en hel match. Vid 0% stannar alla spelare på sin ursprungliga position och bara avbytare tar den utbytte spelarens plats. Vid 100% kan algoritmen fritt flytta spelare för att optimera positionsmatch.
+          </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <input type="range" min={0} max={100} step={5} value={maxChangePct}
+            onChange={e => onMaxChangePctChange(Number(e.target.value))}
+            style={{ flex: 1, accentColor: '#A8C530' }} />
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A', minWidth: 36 }}>{maxChangePct}%</span>
+        </div>
+      </div>
+
       <button onClick={save} style={{ background: saved ? '#22C55E' : '#C8E64C', color: '#1A1A1A', border: 'none', borderRadius: 10, padding: '9px 20px', fontWeight: 600, fontSize: 14, cursor: 'pointer', transition: 'background 200ms ease-out', display: 'flex', alignItems: 'center', gap: 6 }}>
         {saved ? <><Check size={15} color="#fff" /><span style={{ color: '#fff' }}>Sparat!</span></> : 'Spara & generera om'}
       </button>

@@ -46,7 +46,7 @@ export default function MatchComments({ matchId, userEmail }: Props) {
   return (
     <div style={{ background: '#fff', borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginTop: 16 }}>
       <div style={{ padding: '16px 20px', borderBottom: '1px solid #F3F4F6', fontWeight: 700, fontSize: 16, color: '#1A1A1A' }}>
-        Anteckningar
+        Chatt
       </div>
 
       <div style={{ maxHeight: 280, overflowY: 'auto', padding: '8px 0' }}>

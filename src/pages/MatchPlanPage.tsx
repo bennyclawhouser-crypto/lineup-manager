@@ -147,21 +147,35 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
         return { ...lineup, on_field: newField, on_bench: newBench };
       });
 
-      // Recompute substitutions for adjacent slots only (no full regen)
-      const updated = [...editedLineups];
-      // Update substitutions for current → next transition
-      if (activeIdx < updated.length - 1) {
-        updated[activeIdx + 1] = {
-          ...updated[activeIdx + 1],
-          substitutions: computeSubstitutionsLocal(updated[activeIdx], updated[activeIdx + 1]),
-        };
+      // Propagate the manual slot assignment forward:
+      // For each subsequent slot where the player is still on field,
+      // keep them in the same slot_index (unless they've been subbed out).
+      const updated = editedLineups.map((lineup, i) => {
+        if (i <= activeIdx) return lineup;
+        // Check if player is still on field in this slot
+        const playerInSlot = lineup.on_field.find(a => a.player_id === playerId);
+        if (!playerInSlot) return lineup; // subbed out — don't touch
+        // Move player to same slot as in the edited slot
+        const editedAssignment = editedLineups[activeIdx].on_field.find(a => a.player_id === playerId);
+        if (!editedAssignment) return lineup;
+        const targetSlot = editedAssignment.slot_index;
+        const targetPos = editedAssignment.position;
+        // If another player occupies target slot, swap them
+        const occupant = lineup.on_field.find(a => a.slot_index === targetSlot && a.player_id !== playerId);
+        let newField = lineup.on_field.map(a => {
+          if (a.player_id === playerId) return { ...a, slot_index: targetSlot, position: targetPos };
+          if (occupant && a.player_id === occupant.player_id) return { ...a, slot_index: playerInSlot.slot_index, position: playerInSlot.position };
+          return a;
+        });
+        return { ...lineup, on_field: newField };
+      });
+
+      // Recompute substitutions for all transitions from activeIdx onward
+      for (let i = Math.max(1, activeIdx); i < updated.length; i++) {
+        updated[i] = { ...updated[i], substitutions: computeSubstitutionsLocal(updated[i - 1], updated[i]) };
       }
-      // Update substitutions for prev → current transition
       if (activeIdx > 0) {
-        updated[activeIdx] = {
-          ...updated[activeIdx],
-          substitutions: computeSubstitutionsLocal(updated[activeIdx - 1], updated[activeIdx]),
-        };
+        updated[activeIdx] = { ...updated[activeIdx], substitutions: computeSubstitutionsLocal(updated[activeIdx - 1], updated[activeIdx]) };
       }
 
       saveLineups(updated);

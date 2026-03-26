@@ -92,7 +92,7 @@ export default function PitchView({
                 style={{
                   width: 38, height: 38, borderRadius: '50%',
                   background: player ? posColor : 'rgba(255,255,255,0.08)',
-                  border: `2.5px solid ${goingOff ? '#FFEB3B' : 'rgba(255,255,255,0.9)'}`,
+                  border: `2.5px solid ${goingOff ? '#6366F1' : 'rgba(255,255,255,0.9)'}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: player ? 'grab' : 'default',
                   boxShadow: player ? '0 2px 8px rgba(0,0,0,0.3)' : 'none',
@@ -100,7 +100,7 @@ export default function PitchView({
                 }}
               >
                 {goingOff && (
-                  <div style={{ position: 'absolute', top: -7, right: -6, background: '#C8E64C', color: '#1A1A1A', borderRadius: '50%', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
+                  <div style={{ position: 'absolute', top: -7, right: -6, background: '#6366F1', color: '#fff', borderRadius: '50%', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>
                     ↓
                   </div>
                 )}
@@ -133,7 +133,7 @@ export default function PitchView({
               if (!p) return null;
               return (
                 <div key={id} draggable onDragStart={e => e.dataTransfer.setData('playerId', id)}
-                  style={{ background: comingOn ? '#F0FDF4' : '#F9FAFB', border: `1.5px solid ${comingOn ? '#86EFAC' : '#E5E7EB'}`, borderRadius: 20, padding: '5px 12px', fontSize: 13, fontWeight: 500, cursor: 'grab', color: comingOn ? '#15803D' : '#1A1A1A', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  style={{ background: comingOn ? '#EEF2FF' : '#F9FAFB', border: `1.5px solid ${comingOn ? '#6366F1' : '#E5E7EB'}`, borderRadius: 20, padding: '5px 12px', fontSize: 13, fontWeight: 500, cursor: 'grab', color: comingOn ? '#4338CA' : '#1A1A1A', display: 'flex', alignItems: 'center', gap: 4 }}>
                   {comingOn && <span style={{ fontSize: 11, color: '#15803D', fontWeight: 700 }}>+</span>}
                   {displayName(p)}
                 </div>

@@ -127,7 +127,7 @@ function TopBar({ title, showBack, onBack, userEmail, onSignOut }: {
         </button>
       )}
       {!showBack && (
-        <img src="/lineup-manager/logo.png" alt="Lineup Manager" style={{ height: 36, objectFit: 'contain' }} />
+        <img src="/lineup-manager/logo.png" alt="Lineup Manager" style={{ height: 44, objectFit: 'contain' }} />
       )}
       {showBack && (
         <>

@@ -5,7 +5,7 @@ import PitchView from '../components/PitchView';
 import { DEFAULT_FORMATION, FORMATIONS } from '../lib/formations';
 import { useMatchPlan } from '../hooks/useMatchPlan';
 import MatchComments from '../components/MatchComments';
-import { RefreshCw, Users, Clock, ArrowLeftRight, Share2, Copy, Check } from 'lucide-react';
+import { RefreshCw, Users, Clock, ArrowLeftRight, Share2, Check, Settings2 } from 'lucide-react';
 
 function computeSubstitutionsLocal(prev: PeriodLineup, curr: PeriodLineup): PeriodLineup['substitutions'] {
   const prevIds = new Set(prev.on_field.map(a => a.player_id));
@@ -19,111 +19,6 @@ function computeSubstitutionsLocal(prev: PeriodLineup, curr: PeriodLineup): Peri
   });
 }
 
-/**
- * After a manual edit to slot `editedIdx`, regenerate all subsequent slots
- * so the rest of the rotation is based on the new arrangement.
- */
-function regenerateFromSlot(
-  editedLineups: PeriodLineup[],
-  editedIdx: number,
-  allPlayers: Player[],
-  settings: Match['settings'],
-  playersOnField: number,
-  formation: string
-): PeriodLineup[] {
-  if (editedIdx >= editedLineups.length - 1) return editedLineups;
-
-  // Calculate accumulated time for each player up to and including editedIdx
-  const interval = settings.sub_interval_minutes;
-  const accTime: Record<string, number> = {};
-  for (const p of allPlayers) accTime[p.id] = 0;
-  for (let i = 0; i <= editedIdx; i++) {
-    for (const a of editedLineups[i].on_field) {
-      accTime[a.player_id] = (accTime[a.player_id] ?? 0) + interval;
-    }
-  }
-
-  const gk = allPlayers.find(p => p.always_goalkeeper);
-  const outfield = allPlayers.filter(p => !p.always_goalkeeper);
-  const spotsNeeded = playersOnField - (gk ? 1 : 0);
-  const weights: Record<string, number> = {};
-  for (const p of outfield) weights[p.id] = p.extra_time ? 1.5 : p.less_time ? 0.5 : 1;
-
-  const formationDef = FORMATIONS[formation] ?? FORMATIONS[DEFAULT_FORMATION];
-
-  // Import position assignment helper via generateRotation trick:
-  // We'll regenerate ALL slots and splice in the edited ones.
-  const futureSlots = editedLineups.slice(editedIdx + 1);
-  const newFuture: PeriodLineup[] = [];
-  const shuffled = [...outfield].sort(() => Math.random() - 0.5);
-
-  for (const slot of futureSlots) {
-    const sorted = [...shuffled].sort((a, b) =>
-      (accTime[a.id] / weights[a.id]) - (accTime[b.id] / weights[b.id])
-    );
-    const onFieldOutfield = sorted.slice(0, spotsNeeded);
-    const onBench = sorted.slice(spotsNeeded).map(p => p.id);
-
-    // Assign positions using preference score
-    const assignments = assignByPreference(onFieldOutfield, formationDef, gk);
-
-    for (const p of onFieldOutfield) accTime[p.id] = (accTime[p.id] ?? 0) + interval;
-
-    newFuture.push({ ...slot, on_field: assignments, on_bench: onBench, substitutions: [] });
-  }
-
-  // Compute substitutions
-  const result = [...editedLineups.slice(0, editedIdx + 1), ...newFuture];
-  for (let i = 1; i < result.length; i++) {
-    const prev = result[i - 1];
-    const curr = result[i];
-    const prevIds = new Set(prev.on_field.map(a => a.player_id));
-    const currIds = new Set(curr.on_field.map(a => a.player_id));
-    const goingOff = prev.on_field.filter(a => !currIds.has(a.player_id));
-    const comingOn = curr.on_field.filter(a => !prevIds.has(a.player_id));
-    result[i].substitutions = goingOff.flatMap((out, idx) => {
-      const inn = comingOn[idx];
-      if (!inn) return [];
-      return [{ out_player_id: out.player_id, in_player_id: inn.player_id, from_position: out.position, to_position: inn.position }];
-    });
-  }
-  return result;
-}
-
-function assignByPreference(
-  outfield: Player[],
-  formation: { slots: { position: string; x: number; y: number }[] },
-  gk?: Player
-): import('../types').PlayerAssignment[] {
-  const assignments: import('../types').PlayerAssignment[] = [];
-  if (gk) {
-    const gkSlot = formation.slots.findIndex(s => s.position === 'GK');
-    if (gkSlot >= 0) assignments.push({ player_id: gk.id, position: 'GK', slot_index: gkSlot });
-  }
-  const outfieldSlots = formation.slots
-    .map((s, i) => ({ ...s, idx: i }))
-    .filter(s => s.position !== 'GK');
-
-  const pairs: { score: number; pidx: number; sidx: number }[] = [];
-  for (let pi = 0; pi < outfield.length; pi++) {
-    for (let si = 0; si < outfieldSlots.length; si++) {
-      const p = outfield[pi];
-      const pos = outfieldSlots[si].position;
-      const score = p.position_1 === pos ? 3 : p.position_2 === pos ? 2 : p.position_3 === pos ? 1 : 0;
-      pairs.push({ score, pidx: pi, sidx: si });
-    }
-  }
-  pairs.sort((a, b) => b.score - a.score);
-  const usedP = new Set<number>(), usedS = new Set<number>();
-  for (const { pidx, sidx } of pairs) {
-    if (usedP.has(pidx) || usedS.has(sidx)) continue;
-    const slot = outfieldSlots[sidx];
-    assignments.push({ player_id: outfield[pidx].id, position: slot.position as import('../types').Position, slot_index: slot.idx });
-    usedP.add(pidx); usedS.add(sidx);
-    if (usedP.size === Math.min(outfield.length, outfieldSlots.length)) break;
-  }
-  return assignments;
-}
 
 interface Props {
   match: Match;
@@ -449,6 +344,18 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
         </button>
       </div>
 
+      {/* Match settings editor */}
+      <MatchSettingsEditor match={currentMatch} onSave={(newSettings) => {
+        setCurrentMatch(prev => ({ ...prev, settings: newSettings }));
+        const g = generateRotation({ players: matchPlayers, settings: newSettings, playersOnField, formation, maxPositionChangeFraction: maxChangePct / 100 });
+        setLineups(g); saveLineups(g); setActiveIdx(0);
+        if (onUpdateMatchPlayers) {
+          import('../lib/supabase').then(({ supabase }) => {
+            supabase.from('matches').update({ settings: newSettings }).eq('id', currentMatch.id);
+          });
+        }
+      }} />
+
       {/* Play time — circular arcs */}
       <div style={{ ...card, marginTop: 16 }}>
         <div style={{ fontWeight: 700, color: '#1A1A1A', marginBottom: 16, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -487,6 +394,37 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+function MatchSettingsEditor({ match, onSave }: { match: Match; onSave: (s: Match['settings']) => void }) {
+  const [s, setS] = useState({ ...match.settings });
+  const [saved, setSaved] = useState(false);
+  const save = () => { onSave(s); setSaved(true); setTimeout(() => setSaved(false), 1500); };
+  return (
+    <div style={{ ...card, marginTop: 16 }}>
+      <div style={{ fontWeight: 700, fontSize: 16, color: '#1A1A1A', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Settings2 size={16} color="#6366F1" />
+        Matchinställningar
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+        {([
+          { label: 'Perioder', key: 'periods', min: 1, max: 6, step: 1 },
+          { label: 'Min/period', key: 'period_minutes', min: 5, max: 45, step: 5 },
+          { label: 'Bytesintervall (min)', key: 'sub_interval_minutes', min: 1, max: 45, step: 0.5 },
+        ] as { label: string; key: keyof Match['settings']; min: number; max: number; step: number }[]).map(({ label, key, min, max, step }) => (
+          <div key={key}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6B7280', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</label>
+            <input type="number" value={s[key]} min={min} max={max} step={step}
+              onChange={e => setS(prev => ({ ...prev, [key]: Number(e.target.value) }))}
+              style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1.5px solid #E5E7EB', fontSize: 14, boxSizing: 'border-box', color: '#1A1A1A', outline: 'none' }} />
+          </div>
+        ))}
+      </div>
+      <button onClick={save} style={{ background: saved ? '#22C55E' : '#C8E64C', color: '#1A1A1A', border: 'none', borderRadius: 10, padding: '9px 20px', fontWeight: 600, fontSize: 14, cursor: 'pointer', transition: 'background 200ms ease-out', display: 'flex', alignItems: 'center', gap: 6 }}>
+        {saved ? <><Check size={15} color="#fff" /><span style={{ color: '#fff' }}>Sparat!</span></> : 'Spara & generera om'}
+      </button>
     </div>
   );
 }

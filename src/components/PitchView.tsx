@@ -1,13 +1,14 @@
 import type { PlayerAssignment, Player, Substitution } from '../types';
 import { FORMATIONS } from '../lib/formations';
 
+// GK = lila, alla utespelare = ljusgrön bakgrundsfärg (#C8E64C)
 const POS_COLORS: Record<string, string> = {
-  GK: '#F59E0B',
-  CB: '#6366F1',
-  WB: '#8B5CF6',
-  CM: '#22C55E',
-  WM: '#10B981',
-  ST: '#EF4444',
+  GK: '#6366F1',
+  CB: '#C8E64C',
+  WB: '#C8E64C',
+  CM: '#C8E64C',
+  WM: '#C8E64C',
+  ST: '#C8E64C',
 };
 
 interface Props {
@@ -45,7 +46,7 @@ export default function PitchView({
         position: 'relative',
         width: '100%',
         paddingBottom: '85%',
-        background: 'linear-gradient(180deg, #4F46E5 0%, #4338CA 100%)',
+        background: 'linear-gradient(180deg, #4A7C45 0%, #3A6335 100%)',
         borderRadius: 16,
         overflow: 'visible',
         boxShadow: '0 4px 20px rgba(67,56,202,0.35)',
@@ -53,12 +54,12 @@ export default function PitchView({
         {/* Pitch markings */}
         <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', borderRadius: 16 }}
           viewBox="0 0 100 85" preserveAspectRatio="none">
-          <rect x="3" y="2" width="94" height="81" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="0.5" rx="1" />
-          <line x1="3" y1="2" x2="97" y2="2" stroke="rgba(255,255,255,0.2)" strokeWidth="0.4" />
-          <rect x="22" y="62" width="56" height="21" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.4" />
-          <rect x="36" y="75" width="28" height="8" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.4" />
-          <circle cx="50" cy="70" r="0.8" fill="rgba(255,255,255,0.4)" />
-          <path d="M 35 62 A 15 15 0 0 1 65 62" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.4" />
+          <rect x="3" y="2" width="94" height="81" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="1.2" rx="1" />
+          <line x1="3" y1="2" x2="97" y2="2" stroke="rgba(255,255,255,0.55)" strokeWidth="1" />
+          <rect x="22" y="62" width="56" height="21" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
+          <rect x="36" y="75" width="28" height="8" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
+          <circle cx="50" cy="70" r="1.2" fill="rgba(255,255,255,0.7)" />
+          <path d="M 35 62 A 15 15 0 0 1 65 62" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="0.9" />
         </svg>
 
         {/* Players */}
@@ -91,7 +92,7 @@ export default function PitchView({
                 style={{
                   width: 38, height: 38, borderRadius: '50%',
                   background: player ? posColor : 'rgba(255,255,255,0.08)',
-                  border: `2.5px solid ${goingOff ? '#C8E64C' : 'rgba(255,255,255,0.8)'}`,
+                  border: `2.5px solid ${goingOff ? '#FFEB3B' : 'rgba(255,255,255,0.9)'}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: player ? 'grab' : 'default',
                   boxShadow: player ? '0 2px 8px rgba(0,0,0,0.3)' : 'none',

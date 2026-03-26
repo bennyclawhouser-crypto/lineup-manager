@@ -271,7 +271,7 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
         {Object.keys(FORMATIONS).map(f => (
           <button key={f} onClick={() => handleFormationChange(f)} style={{
             padding: '5px 14px', borderRadius: 999, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
-            background: formation === f ? '#C8E64C' : '#fff',
+            background: formation === f ? '#A8C530' : '#fff',
             color: '#1A1A1A',
             boxShadow: formation === f ? 'none' : '0 1px 4px rgba(0,0,0,0.08)',
           }}>
@@ -285,8 +285,8 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
         {lineups.map((l, i) => (
           <button key={i} onClick={() => setActiveIdx(i)} style={{
             flexShrink: 0, padding: '5px 14px', borderRadius: 999, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
-            background: i === activeIdx ? '#6366F1' : '#fff',
-            color: i === activeIdx ? '#fff' : '#1A1A1A',
+            background: i === activeIdx ? '#A8C530' : '#fff',
+            color: '#1A1A1A',
             boxShadow: i === activeIdx ? 'none' : '0 1px 4px rgba(0,0,0,0.08)',
           }}>
             {slotLabel(l)}

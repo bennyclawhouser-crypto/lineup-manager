@@ -127,9 +127,14 @@ function TopBar({ title, showBack, onBack, userEmail, onSignOut }: {
         </button>
       )}
       {!showBack && (
-        <img src="/lineup-manager/logo.png" alt="Lineup Manager" style={{ height: 28, objectFit: 'contain' }} />
+        <img src="/lineup-manager/logo.png" alt="Lineup Manager" style={{ height: 36, objectFit: 'contain' }} />
       )}
-      {showBack && <span style={{ fontWeight: 700, fontSize: 20, color: '#1A1A1A', flex: 1 }}>{title}</span>}
+      {showBack && (
+        <>
+          <img src="/lineup-manager/logo.png" alt="Lineup Manager" style={{ height: 30, objectFit: 'contain' }} />
+          <span style={{ fontWeight: 700, fontSize: 18, color: '#1A1A1A', flex: 1 }}>{title}</span>
+        </>
+      )}
       {userEmail && onSignOut && (
         <button onClick={onSignOut} style={{
           background: 'rgba(255,255,255,0.7)', border: 'none', borderRadius: 10,

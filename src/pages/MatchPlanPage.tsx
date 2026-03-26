@@ -5,7 +5,7 @@ import PitchView from '../components/PitchView';
 import { DEFAULT_FORMATION, FORMATIONS } from '../lib/formations';
 import { useMatchPlan } from '../hooks/useMatchPlan';
 import MatchComments from '../components/MatchComments';
-import { RefreshCw, Users, Clock, ArrowLeftRight } from 'lucide-react';
+import { RefreshCw, Users, Clock, ArrowLeftRight, Share2, Copy, Check } from 'lucide-react';
 
 function computeSubstitutionsLocal(prev: PeriodLineup, curr: PeriodLineup): PeriodLineup['substitutions'] {
   const prevIds = new Set(prev.on_field.map(a => a.player_id));
@@ -149,7 +149,25 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
   const [initialized, setInitialized] = useState(false);
   const [editingRoster, setEditingRoster] = useState(false);
   const [rosterSelection, setRosterSelection] = useState<string[]>(currentMatch.player_ids);
-  const [maxChangePct, setMaxChangePct] = useState(25); // % of players allowed to change position
+  const [maxChangePct, setMaxChangePct] = useState(25);
+  const [copied, setCopied] = useState(false);
+
+  const matchUrl = `${window.location.origin}${window.location.pathname}?match=${currentMatch.id}`;
+
+  const handleShare = async () => {
+    const shareData = {
+      title: `Lineup — ${currentMatch.opponent || 'Match'}`,
+      text: `Se laguppställningen för ${currentMatch.opponent || 'matchen'}`,
+      url: matchUrl,
+    };
+    if (navigator.share) {
+      try { await navigator.share(shareData); } catch { /* cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(matchUrl).catch(() => {});
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }; // % of players allowed to change position
   const playersOnField = 9;
 
   // Load saved plan from Supabase — validate before using
@@ -297,20 +315,27 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
     <div style={{ paddingTop: 8, paddingBottom: 32 }}>
 
       {/* Action bar */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 14 }}>
-        <button onClick={() => {
-          const g = generateRotation({ players: matchPlayers, settings: currentMatch.settings, playersOnField, formation, maxPositionChangeFraction: maxChangePct / 100 });
-          setLineups(g); saveLineups(g); setActiveIdx(0);
-        }} style={secondaryBtn}>
-          <RefreshCw size={14} color="#6B7280" />
-          Återställ
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+        {/* Share button */}
+        <button onClick={handleShare} style={{ ...primaryBtn, gap: 6 }}>
+          {copied ? <Check size={15} color="#1A1A1A" /> : <Share2 size={15} color="#1A1A1A" />}
+          {copied ? 'Kopierad!' : 'Dela'}
         </button>
-        {onUpdateMatchPlayers && (
-          <button onClick={() => { setRosterSelection(currentMatch.player_ids); setEditingRoster(true); }} style={secondaryBtn}>
-            <Users size={14} color="#6B7280" />
-            Spelare ({matchPlayers.length})
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => {
+            const g = generateRotation({ players: matchPlayers, settings: currentMatch.settings, playersOnField, formation, maxPositionChangeFraction: maxChangePct / 100 });
+            setLineups(g); saveLineups(g); setActiveIdx(0);
+          }} style={secondaryBtn}>
+            <RefreshCw size={14} color="#6B7280" />
+            Återställ
           </button>
-        )}
+          {onUpdateMatchPlayers && (
+            <button onClick={() => { setRosterSelection(currentMatch.player_ids); setEditingRoster(true); }} style={secondaryBtn}>
+              <Users size={14} color="#6B7280" />
+              Spelare ({matchPlayers.length})
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Roster modal */}
@@ -345,20 +370,6 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
           <RefreshCw size={12} color="#6366F1" /> Synkar...
         </div>
       )}
-
-      {/* Position change setting */}
-      <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, padding: '12px 16px' }}>
-        <ArrowLeftRight size={15} color="#6B7280" />
-        <span style={{ fontSize: 13, color: '#6B7280', whiteSpace: 'nowrap' }}>Max positionsbyte:</span>
-        <input type="range" min={0} max={100} step={5} value={maxChangePct} onChange={e => setMaxChangePct(Number(e.target.value))} style={{ flex: 1, accentColor: '#C8E64C' }} />
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A', minWidth: 32 }}>{maxChangePct}%</span>
-        <button onClick={() => {
-          const g = generateRotation({ players: matchPlayers, settings: currentMatch.settings, playersOnField, formation, maxPositionChangeFraction: maxChangePct / 100 });
-          setLineups(g); saveLineups(g); setActiveIdx(0);
-        }} style={primaryBtn}>
-          Ok
-        </button>
-      </div>
 
       {/* Formation picker */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
@@ -423,6 +434,20 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
 
       {/* Comments */}
       {userEmail && <MatchComments matchId={currentMatch.id} userEmail={userEmail} />}
+
+      {/* Position change setting */}
+      <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, padding: '12px 16px' }}>
+        <ArrowLeftRight size={15} color="#6B7280" />
+        <span style={{ fontSize: 13, color: '#6B7280', whiteSpace: 'nowrap' }}>Max positionsbyte:</span>
+        <input type="range" min={0} max={100} step={5} value={maxChangePct} onChange={e => setMaxChangePct(Number(e.target.value))} style={{ flex: 1, accentColor: '#C8E64C' }} />
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A', minWidth: 32 }}>{maxChangePct}%</span>
+        <button onClick={() => {
+          const g = generateRotation({ players: matchPlayers, settings: currentMatch.settings, playersOnField, formation, maxPositionChangeFraction: maxChangePct / 100 });
+          setLineups(g); saveLineups(g); setActiveIdx(0);
+        }} style={primaryBtn}>
+          Ok
+        </button>
+      </div>
 
       {/* Play time — circular arcs */}
       <div style={{ ...card, marginTop: 16 }}>

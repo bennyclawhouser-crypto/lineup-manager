@@ -344,20 +344,6 @@ export default function MatchPlanPage({ match, players, onUpdateMatchPlayers }: 
       {/* Comments */}
       {userEmail && <MatchComments matchId={currentMatch.id} userEmail={userEmail} />}
 
-      {/* Position change setting */}
-      <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, padding: '12px 16px' }}>
-        <ArrowLeftRight size={15} color="#6B7280" />
-        <span style={{ fontSize: 13, color: '#6B7280', whiteSpace: 'nowrap' }}>Max positionsbyte:</span>
-        <input type="range" min={0} max={100} step={5} value={maxChangePct} onChange={e => setMaxChangePct(Number(e.target.value))} style={{ flex: 1, accentColor: '#C8E64C' }} />
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A', minWidth: 32 }}>{maxChangePct}%</span>
-        <button onClick={() => {
-          const g = generateRotation({ players: matchPlayers, settings: currentMatch.settings, playersOnField, formation, maxPositionChangeFraction: maxChangePct / 100 });
-          setLineups(g); saveLineups(g); setActiveIdx(0);
-        }} style={primaryBtn}>
-          Ok
-        </button>
-      </div>
-
       {/* Match settings editor */}
       <MatchSettingsEditor
         match={currentMatch}
